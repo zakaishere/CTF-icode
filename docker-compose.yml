@@ -60,7 +60,7 @@ services:
       # Backend spawns challenge containers via the HOST docker daemon
       DOCKER_HOST:        unix:///var/run/docker.sock
       CTF_INSTANCE_HOST:  ${CTF_INSTANCE_HOST:-localhost}
-      CTF_UPLOAD_PATH:    ${CTF_UPLOAD_PATH:-/home/zakariae-elhamadani/ctf-uploads}
+      CTF_UPLOAD_PATH:    ${CTF_UPLOAD_PATH:-/data/ctf-uploads}
       # Disable mail health check (no SMTP in dev; avoids health DOWN)
       MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
       # Health-check probes (waitForPort/waitForHttp) must reach the HOST's published
@@ -77,7 +77,7 @@ services:
       # Bind mount: same absolute path on host AND in container (required for
       # docker build contexts that the HOST daemon resolves on the HOST FS).
       # Value comes from CTF_UPLOAD_PATH in .env — must be identical on host and in container.
-      - ${CTF_UPLOAD_PATH:-/home/zakariae-elhamadani/ctf-uploads}:${CTF_UPLOAD_PATH:-/home/zakariae-elhamadani/ctf-uploads}
+      - ${CTF_UPLOAD_PATH:-/data/ctf-uploads}:${CTF_UPLOAD_PATH:-/data/ctf-uploads}
     networks:
       - icode-net
     depends_on:
