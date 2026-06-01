@@ -30,6 +30,8 @@ services:
     image: postgres:16-alpine
     container_name: icode-db
     restart: unless-stopped
+    # Memory cap — keeps Postgres from starving the JVM on a 4 GB host.
+    mem_limit: 512m
     environment:
       POSTGRES_DB:       ${DB_NAME:-icode_ctf}
       POSTGRES_USER:     ${DB_USERNAME:-icode_user}
@@ -56,6 +58,10 @@ services:
     image: icode-ctf-backend:latest
     container_name: icode-backend
     restart: unless-stopped
+    # Memory cap. The JVM (-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 in the
+    # Dockerfile) reads THIS cgroup limit, so heap tops out at ~960 MB instead of
+    # grabbing 75% of the whole 4 GB host and forcing everything else to swap.
+    mem_limit: 1280m
     # Optional: any extra vars in .env (e.g. JWT_EXPIRY_MS, DB_POOL_SIZE,
     # DOCKER_TLS_VERIFY) are injected too. Absent .env is fine — required: false.
     env_file:
@@ -127,6 +133,8 @@ services:
     image: icode-ctf-frontend:latest
     container_name: icode-frontend
     restart: unless-stopped
+    # Memory cap — the Next.js standalone server is light at runtime.
+    mem_limit: 512m
     environment:
       NODE_ENV: production
       # Empty → the browser uses same-origin relative URLs, which nginx proxies
@@ -153,6 +161,7 @@ services:
     image: icode-ctf-nginx:latest
     container_name: icode-nginx
     restart: unless-stopped
+    mem_limit: 96m
     ports:
       - "${HTTP_PORT:-80}:80"
     networks:

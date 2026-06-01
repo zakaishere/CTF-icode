@@ -146,7 +146,7 @@ function showErrorToast(err: ApiErrorBody) {
           localStorage.removeItem("icode_ctf_role");
           localStorage.removeItem("icode_ctf_userId");
           localStorage.removeItem("icode_ctf_email");
-          localStorage.removeItem("icode_ctf_firstName");
+          localStorage.removeItem("icode_ctf_username");
           document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           document.cookie = "role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           setTimeout(() => { window.location.href = "/"; }, 2000);
@@ -175,8 +175,7 @@ function showErrorToast(err: ApiErrorBody) {
 // ── Auth ────────────────────────────────────────────────────────────────────
 
 export interface RegisterPlayerRequest {
-  firstName: string;
-  lastName: string;
+  username: string;
   email: string;
   password: string;
 }
@@ -191,7 +190,7 @@ export interface LoginResponse {
   role: string;
   userId: string;
   email: string;
-  firstName: string;
+  username: string;
 }
 
 export const registerPlayer = (data: RegisterPlayerRequest) =>

@@ -23,7 +23,7 @@ function StatusDot({ status }: { status: string }) {
 }
 
 export default function AdminOverview() {
-  const { firstName, logout } = useAuth();
+  const { username, logout } = useAuth();
   const router = useRouter();
 
   const { data: competitions = [], isLoading } = useQuery<CTFCompetitionDTO[]>({
@@ -45,7 +45,7 @@ export default function AdminOverview() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ fontSize: 13, color: "#6b7280" }}>
-            Admin: <strong style={{ color: "#f1f1f1" }}>{firstName ?? "Admin"}</strong>
+            Admin: <strong style={{ color: "#f1f1f1" }}>{username ?? "Admin"}</strong>
           </span>
           <button onClick={() => { logout(); router.replace("/"); }}
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#6b7280", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 4 }}>

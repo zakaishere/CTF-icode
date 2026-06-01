@@ -278,7 +278,7 @@ function SkeletonRows() {
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export default function WelcomePage() {
-  const { isAuthenticated, role, firstName, logout } = useAuth();
+  const { isAuthenticated, role, username, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -369,7 +369,7 @@ export default function WelcomePage() {
               color: "var(--ict-accent-bright)",
               textShadow: "0 0 10px rgba(96,165,255,0.35)",
             }}>
-              {firstName ?? "Player"}
+              {username ?? "Player"}
             </span>
 
             <button
@@ -387,7 +387,7 @@ export default function WelcomePage() {
       {/* ── Content ── */}
       <main className="hub-content">
         <div className="hub-greeting">
-          Welcome back, <span className="hub-greeting-name">{firstName ?? "Player"}</span>
+          Welcome back, <span className="hub-greeting-name">{username ?? "Player"}</span>
         </div>
 
         {isLoading ? (

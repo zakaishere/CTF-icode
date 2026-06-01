@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -20,7 +21,11 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    private static final String PLATFORM_URL = "http://localhost:3000";
+    // Public base URL of the frontend, used to build links in emails.
+    // Set APP_PLATFORM_URL (e.g. http://161.35.90.34) in .env for production.
+    @Value("${app.platform-url:http://localhost:3000}")
+    private String platformUrl;
+
     private static final DateTimeFormatter DT_FMT =
             DateTimeFormatter.ofPattern("EEEE, MMMM d yyyy 'at' HH:mm");
 
@@ -81,10 +86,10 @@ public class EmailService {
                     <h2 style="color: %s; margin-top: 0;">Welcome Aboard!</h2>
                     <p style="font-size: 16px;">Hello %s,</p>
                     <p style="font-size: 16px; line-height: 1.6;">An administrator has approved your teacher account. You can now log in and start creating assessments.</p>
-                    <a href="http://localhost:3000/auth" style="display: inline-block; background: %s; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: bold;">Login now</a>
+                    <a href="%s/auth" style="display: inline-block; background: %s; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: bold;">Login now</a>
                 </div>
             </div>
-            """, BACKGROUND_COLOR, TEXT_COLOR, CARD_BG, SUCCESS_COLOR, teacherName, BRAND_COLOR);
+            """, BACKGROUND_COLOR, TEXT_COLOR, CARD_BG, SUCCESS_COLOR, teacherName, platformUrl, BRAND_COLOR);
 
         send(toEmail, subject, html);
     }

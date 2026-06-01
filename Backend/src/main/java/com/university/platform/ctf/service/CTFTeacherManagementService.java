@@ -139,7 +139,7 @@ public class CTFTeacherManagementService {
                 User u = userMap.get(m.getId().getUserId());
                 return CTFTeamMemberDTO.builder()
                         .userId(m.getId().getUserId())
-                        .displayName(u != null ? u.getFirstName() + " " + u.getLastName() : "Unknown")
+                        .displayName(u != null ? u.getUsername() : "Unknown")
                         .role(m.getRole().name())
                         .joinedAt(m.getJoinedAt())
                         .build();
@@ -153,7 +153,7 @@ public class CTFTeacherManagementService {
                     .name(t.getName())
                     .avatarColor(t.getAvatarColor())
                     .captainId(t.getCaptainId())
-                    .captainName(captain != null ? captain.getFirstName() + " " + captain.getLastName() : null)
+                    .captainName(captain != null ? captain.getUsername() : null)
                     .members(memberDtos)
                     .totalPoints(tt.totalPoints())
                     .solveCount(tt.solveCount())
@@ -211,7 +211,7 @@ public class CTFTeacherManagementService {
                     .challengeTitle(chal != null ? chal.getTitle() : "—")
                     .challengeCategory(chal != null && chal.getCategory() != null ? chal.getCategory().name() : null)
                     .solvedByUserId(s.getUserId())
-                    .solvedByName(u != null ? u.getFirstName() + " " + u.getLastName() : "Unknown")
+                    .solvedByName(u != null ? u.getUsername() : "Unknown")
                     .pointsAwarded(pts)
                     .correct(Boolean.TRUE.equals(s.getIsCorrect()))
                     .cheatFlagged(Boolean.TRUE.equals(s.getIsCheatFlagged()))
@@ -258,7 +258,7 @@ public class CTFTeacherManagementService {
                     .submittingTeamName(submitting != null ? submitting.getName() : "Unknown")
                     .submittingTeamAccentColor(submitting != null ? submitting.getAvatarColor() : null)
                     .submittingUserId(ev.getSubmittingUserId())
-                    .submittingUserName(submitter != null ? submitter.getFirstName() + " " + submitter.getLastName() : null)
+                    .submittingUserName(submitter != null ? submitter.getUsername() : null)
                     .submittingUserEmail(submitter != null ? submitter.getEmail() : null)
                     .sourceTeamId(ev.getSourceTeam())
                     .sourceTeamName(source != null ? source.getName() : "Unknown")
@@ -267,7 +267,7 @@ public class CTFTeacherManagementService {
                     .detectedAt(ev.getDetectedAt())
                     .dismissed(Boolean.TRUE.equals(ev.getDismissed()))
                     .dismissedByUsername(dismisser != null
-                            ? dismisser.getFirstName() + " " + dismisser.getLastName() : null)
+                            ? dismisser.getUsername() : null)
                     .submittingTeamDisqualified(submitting != null && Boolean.TRUE.equals(submitting.getIsDisqualified()))
                     .build();
         }).collect(Collectors.toList());

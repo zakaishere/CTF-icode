@@ -24,10 +24,12 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 const playerSchema = z.object({
-  firstName: z.string().min(1, "Required"),
-  lastName:  z.string().min(1, "Required"),
-  email:     z.string().email(),
-  password:  z.string().min(6, "Min 6 characters"),
+  username: z.string()
+    .min(3, "Min 3 characters")
+    .max(30, "Max 30 characters")
+    .regex(/^[A-Za-z0-9_.-]+$/, "Letters, numbers, and _ . - only"),
+  email:    z.string().email(),
+  password: z.string().min(6, "Min 6 characters"),
 });
 const forgotEmailSchema = z.object({ email: z.string().email() });
 const otpSchema   = z.object({ code: z.string().length(6, "Must be 6 digits") });
@@ -391,7 +393,7 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
   const [showPwd, setShowPwd] = useState(false);
   const form = useForm({
     resolver: zodResolver(playerSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", password: "" },
+    defaultValues: { username: "", email: "", password: "" },
   });
 
   if (pendingEmail) return <EmailVerifyStep email={pendingEmail} onBack={() => setPendingEmail(null)} />;
@@ -411,19 +413,12 @@ function RegisterForm({ onLogin }: { onLogin: () => void }) {
       finally { setLoading(false); }
     })} className="ict-auth-form">
       {error && <ErrBanner msg={error} />}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <IctInput
-          label="First Name" placeholder="Ali"
-          icon={<User size={14} />}
-          error={form.formState.errors.firstName?.message}
-          {...form.register("firstName")}
-        />
-        <IctInput
-          label="Last Name" placeholder="Benali"
-          error={form.formState.errors.lastName?.message}
-          {...form.register("lastName")}
-        />
-      </div>
+      <IctInput
+        label="Username" placeholder="h4ck3r"
+        icon={<User size={14} />}
+        error={form.formState.errors.username?.message}
+        {...form.register("username")}
+      />
       <IctInput
         label="Email" type="email" placeholder="player@uae.ac.ma"
         icon={<Mail size={14} />}

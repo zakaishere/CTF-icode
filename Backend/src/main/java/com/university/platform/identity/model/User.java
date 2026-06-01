@@ -10,8 +10,9 @@ import java.util.UUID;
 @Table(
     name = "users",
     indexes = {
-        @Index(name = "idx_users_email", columnList = "email"),
-        @Index(name = "idx_users_role",  columnList = "role")
+        @Index(name = "idx_users_email",    columnList = "email"),
+        @Index(name = "idx_users_username", columnList = "username"),
+        @Index(name = "idx_users_role",     columnList = "role")
     }
 )
 @Getter
@@ -27,11 +28,8 @@ public class User {
     @Column(name = "id", updatable = false, nullable = false, columnDefinition = "uuid")
     private UUID id;
 
-    @Column(name = "first_name", nullable = false, length = 100)
-    private String firstName;
-
-    @Column(name = "last_name", nullable = false, length = 100)
-    private String lastName;
+    @Column(name = "username", nullable = false, unique = true, length = 50)
+    private String username;
 
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;

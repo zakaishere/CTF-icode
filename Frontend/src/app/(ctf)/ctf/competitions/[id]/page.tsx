@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 
 /**
- * The overview route is a stable URL but always sends users to /challenges.
- * Keeping it as a dedicated page (rather than a top-level rewrite) lets the
- * sidebar's Overview entry highlight when this URL is visited briefly, and
- * gives us somewhere to render an explicit "summary" view later if needed.
+ * The bare competition URL is kept as a stable entry point but always sends
+ * players straight to /challenges (their home). There is no Overview tab in
+ * the player sidebar; this redirect just makes the bare URL resolve sensibly.
  */
 export default async function CTFOverviewPage({
   params,

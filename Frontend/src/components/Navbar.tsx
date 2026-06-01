@@ -60,7 +60,7 @@ function ThemeToggle() {
 export default function Navbar() {
   const pathname = usePathname();
   const router   = useRouter();
-  const { isAuthenticated, role, firstName, email, logout } = useAuth();
+  const { isAuthenticated, role, username, email, logout } = useAuth();
 
   const links = role === "ADMIN" ? adminLinks : playerLinks;
 
@@ -98,12 +98,12 @@ export default function Navbar() {
                   className="psp-nav-name-btn"
                   title={email || "Account"}
                 >
-                  {firstName || "Player"}
+                  {username || "Player"}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <div className="px-3 py-2">
-                  <p className="text-sm font-semibold">{firstName || "Player"}</p>
+                  <p className="text-sm font-semibold">{username || "Player"}</p>
                   <p className="text-xs text-[#5e6c84] truncate">{email}</p>
                   <p className="text-xs text-[#5e6c84] mt-0.5">{role}</p>
                 </div>

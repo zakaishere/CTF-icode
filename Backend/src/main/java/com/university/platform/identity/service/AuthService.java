@@ -66,7 +66,7 @@ public class AuthService {
                 .token(jwt)
                 .email(user.getEmail())
                 .role(user.getRole().name())
-                .firstName(user.getFirstName())
+                .username(user.getUsername())
                 .userId(user.getId().toString())
                 .build();
     }
@@ -76,10 +76,12 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
         }
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("Username already taken");
+        }
 
         User player = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
+                .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(Role.PLAYER)

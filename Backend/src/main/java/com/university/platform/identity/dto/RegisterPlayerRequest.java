@@ -2,6 +2,7 @@ package com.university.platform.identity.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -9,12 +10,10 @@ import lombok.Data;
 public class RegisterPlayerRequest {
 
     @NotBlank
-    @Size(min = 1, max = 100)
-    private String firstName;
-
-    @NotBlank
-    @Size(min = 1, max = 100)
-    private String lastName;
+    @Size(min = 3, max = 30, message = "Username must be 3-30 characters")
+    @Pattern(regexp = "^[A-Za-z0-9_.-]+$",
+             message = "Username may only contain letters, numbers, and _ . -")
+    private String username;
 
     @NotBlank
     @Email

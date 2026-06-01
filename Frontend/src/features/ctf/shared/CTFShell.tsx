@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
-  ChevronLeft, LayoutGrid, Puzzle, Trophy, Users, Bell,
+  ChevronLeft, Puzzle, Trophy, Users, Bell,
   Volume2, VolumeX, Pause, Snowflake, Loader2,
 } from "lucide-react";
 import { useCTFCompetition } from "@/features/ctf/context/CTFCompetitionContext";
@@ -32,7 +32,6 @@ export default function CTFShell({ competitionId, children }: {
   const pathname = usePathname();
 
   const items: NavItem[] = useMemo(() => [
-    { href: `/ctf/competitions/${competitionId}`,                label: "Overview",      icon: <LayoutGrid size={16} /> },
     { href: `/ctf/competitions/${competitionId}/challenges`,     label: "Challenges",    icon: <Puzzle size={16} /> },
     { href: `/ctf/competitions/${competitionId}/scoreboard`,     label: "Scoreboard",    icon: <Trophy size={16} /> },
     { href: `/ctf/competitions/${competitionId}/team`,           label: "My Team",       icon: <Users size={16} /> },

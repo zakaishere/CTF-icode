@@ -351,7 +351,7 @@ public class CTFTeamService {
         List<CTFTeamMemberDTO> memberDTOs = members.stream().map(m -> {
             UUID memberId = m.getId().getUserId();
             User u = userMap.get(memberId);
-            String name = u != null ? u.getFirstName() + " " + u.getLastName() : "Unknown";
+            String name = u != null ? u.getUsername() : "Unknown";
             int memberSolves = (int) teamSolves.stream()
                     .filter(s -> s.getSolvedBy().equals(memberId)).count();
             int memberPoints = teamSolves.stream()
@@ -413,7 +413,7 @@ public class CTFTeamService {
         List<CTFTeamMemberDTO> memberDTOs = members.stream().map(m -> {
             UUID memberId = m.getId().getUserId();
             User u = userMap.get(memberId);
-            String name = u != null ? u.getFirstName() + " " + u.getLastName() : "Unknown";
+            String name = u != null ? u.getUsername() : "Unknown";
             int memberSolves = solveRepo.countByCompetitionIdAndTeamIdAndSolvedBy(compId, teamId, memberId);
             int memberPoints = solveRepo.sumPointsAwardedByMember(compId, teamId, memberId);
             return CTFTeamMemberDTO.builder()

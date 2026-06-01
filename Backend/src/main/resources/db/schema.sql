@@ -11,18 +11,19 @@ SET search_path TO icode_ctf;
 
 CREATE TABLE IF NOT EXISTS users (
     id                UUID         NOT NULL DEFAULT gen_random_uuid(),
-    first_name        VARCHAR(100) NOT NULL,
-    last_name         VARCHAR(100) NOT NULL,
+    username          VARCHAR(50)  NOT NULL,
     email             VARCHAR(255) NOT NULL,
     password_hash     VARCHAR(255) NOT NULL,
     role              VARCHAR(20)  NOT NULL CHECK (role IN ('PLAYER','ADMIN')),
     is_email_verified BOOLEAN      NOT NULL DEFAULT false,
     CONSTRAINT users_pkey PRIMARY KEY (id),
-    CONSTRAINT users_email_key UNIQUE (email)
+    CONSTRAINT users_email_key    UNIQUE (email),
+    CONSTRAINT users_username_key UNIQUE (username)
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_role  ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_email    ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_role     ON users(role);
 
 CREATE TABLE IF NOT EXISTS verification_tokens (
     id          UUID        NOT NULL DEFAULT gen_random_uuid(),
@@ -338,10 +339,10 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed default admin account (password: Admin1234!)
-INSERT INTO users (id, first_name, last_name, email, password_hash, role, is_email_verified)
+INSERT INTO users (id, username, email, password_hash, role, is_email_verified)
 VALUES (
   gen_random_uuid(),
-  'Admin', 'icode-ctf',
+  'admin',
   'admin@icode-ctf.local',
   '$2b$10$p8hBXEZMyiOIQv4oT0433.EB6JrOzlaSTQkq/U3QnXsaVKLx61bs2',
   'ADMIN',

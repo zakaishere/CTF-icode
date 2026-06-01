@@ -68,11 +68,11 @@ interface Props {
 }
 
 export default function CtfWorkspaceHeader({ comp }: Props) {
-  const { firstName, email, role, logout } = useAuth();
+  const { username, email, role, logout } = useAuth();
   const router = useRouter();
 
-  const initials = firstName
-    ? firstName.charAt(0).toUpperCase()
+  const initials = username
+    ? username.charAt(0).toUpperCase()
     : email
     ? email.charAt(0).toUpperCase()
     : "U";
@@ -185,7 +185,7 @@ export default function CtfWorkspaceHeader({ comp }: Props) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div
-              title={firstName || email || "Account"}
+              title={username || email || "Account"}
               style={{
                 width: 30, height: 30, borderRadius: "50%",
                 background: avatarColor,
@@ -202,7 +202,7 @@ export default function CtfWorkspaceHeader({ comp }: Props) {
           <DropdownMenuContent align="end" className="w-48">
             <div className="px-3 py-2">
               <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                {firstName || "User"}
+                {username || "User"}
               </p>
               <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{email}</p>
             </div>

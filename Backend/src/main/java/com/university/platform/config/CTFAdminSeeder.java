@@ -24,8 +24,7 @@ public class CTFAdminSeeder {
             String adminEmail = "admin@icode-ctf.local";
             if (!userRepository.existsByEmail(adminEmail)) {
                 User admin = User.builder()
-                        .firstName("icode")
-                        .lastName("Admin")
+                        .username("admin")
                         .email(adminEmail)
                         .passwordHash(passwordEncoder.encode("Admin1234!"))
                         .role(Role.ADMIN)
