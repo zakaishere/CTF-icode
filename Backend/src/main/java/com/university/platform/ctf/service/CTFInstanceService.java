@@ -508,15 +508,22 @@ public class CTFInstanceService {
 
                 dockerClient.startContainerCmd(containerId).exec();
 
+                // Give the container a moment to boot before the first probe — on a
+                // loaded/slow host the app needs time before it binds its port.
+                try { Thread.sleep(2000); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+
                 // Wait until the published port actually accepts TCP connections.
                 // This gives the in-container process time to start, and surfaces
                 // "port not reachable" errors (wrong app port, app binds 127.0.0.1, etc.)
                 // before we tell the frontend the instance is RUNNING.
-                boolean healthy = waitForPort(port, 20, 750);
+                // 40 attempts × 1000ms = up to 40 s — generous for slow servers.
+                boolean healthy = waitForPort(port, 40, 1000);
                 if (!healthy) {
                     throw new IllegalStateException(
                         "Container started but port " + port + " is not accepting connections " +
-                        "after 15 s. Check that the challenge app listens on 0.0.0.0:" +
+                        "after 40 s. Check that the challenge app listens on 0.0.0.0:" +
                         resolvedPort + " inside the container.");
                 }
 
@@ -571,7 +578,7 @@ public class CTFInstanceService {
                 // when the configured container port differs from the port the app actually
                 // listens on inside the container. Verify the app answers a real HTTP request
                 // (any status code, even 404, proves reachability).
-                if (HTTP.equals(connectionType(challenge)) && !waitForHttp(port, 30, 1000)) {
+                if (HTTP.equals(connectionType(challenge)) && !waitForHttp(port, 30, 2000)) {
                     throw new IllegalStateException(
                         "Port " + port + " (container port " + resolvedPort + ") is published but " +
                         "the app never answered an HTTP request. Make sure the app listens on " +

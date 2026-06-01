@@ -205,6 +205,34 @@ export default function InstancePanel({
     return () => clearInterval(t);
   }, [state]);
 
+  // ── Poll status while STARTING (fallback if the WS RUNNING/FAILED is missed),
+  // and bound the spinner so it can never hang forever.
+  useEffect(() => {
+    if (state !== "STARTING") return;
+    const started = Date.now();
+    const t = setInterval(() => {
+      if (Date.now() - started > 180_000) {   // 3 min hard timeout
+        setState("FAILED");
+        setBusy(false);
+        return;
+      }
+      getCtfInstanceStatus(challengeId, teamId).then(s => {
+        if (!s) return;
+        instanceId.current = s.instanceId;
+        if (s.status === "RUNNING") {
+          setInstance(s);
+          setState("RUNNING");
+          sessionStorage.setItem(sessionKey, s.instanceId);
+        } else if (s.status === "FAILED") {
+          setState("FAILED");
+          setBusy(false);
+          sessionStorage.removeItem(sessionKey);
+        }
+      }).catch(() => { /* transient — keep spinning */ });
+    }, 5_000);
+    return () => clearInterval(t);
+  }, [state, challengeId, teamId, sessionKey]);
+
   // ── Client-side expiry: flip to EXPIRED the instant the clock runs out, ────
   // without waiting for the backend cleanup job (which can lag up to 60s).
   useEffect(() => {
@@ -643,11 +671,11 @@ export default function InstancePanel({
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <ServerCrash size={14} color={c.red} />
         <span style={{ fontSize: 13, fontWeight: 700, color: c.red }}>
-          Failed to start
+          Instance Failed to Start
         </span>
       </div>
       <div style={{ fontSize: 12, color: c.muted, marginBottom: 12 }}>
-        Server error. Try again in a moment.
+        The challenge environment could not start. Try again.
       </div>
       <button
         onClick={handleStart}
