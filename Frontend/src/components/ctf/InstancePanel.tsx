@@ -31,7 +31,7 @@ function startingMessage(elapsedSeconds: number): string {
 
 // CHECKING = first status fetch in flight; we don't know yet whether an instance
 // exists, so we must NOT show the "Start Instance" button (would be misleading).
-type PanelState = "CHECKING" | "IDLE" | "STARTING" | "RUNNING" | "FAILED" | "EXPIRED" | "AT_CAPACITY";
+type PanelState = "CHECKING" | "IDLE" | "STARTING" | "RUNNING" | "FAILED" | "EXPIRED" | "AT_CAPACITY" | "LIMIT";
 
 export interface InstancePanelProps {
   challengeId:    string;
@@ -182,6 +182,7 @@ export default function InstancePanel({
   const [instance, setInstance] = useState<CTFInstanceResponse | null>(null);
   const [busy, setBusy]       = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [startError, setStartError] = useState<string | null>(null);
   const [copied, setCopied]   = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -350,10 +351,17 @@ export default function InstancePanel({
       setInstance(res);
       if (res.status === "RUNNING") setState("RUNNING");
     } catch (err: any) {
-      const code = err?.code ?? "";
-      if (code === "CTF_CAPACITY" || err?.status === 503) {
+      const code   = err?.code ?? "";
+      const status = err?.status;
+      if (code === "CTF_CAPACITY" || status === 503) {
         setState("AT_CAPACITY");
+      } else if (status === 429) {
+        // Per-user instance limit (or rate limit) — show the backend's real reason,
+        // not a generic "failed to start".
+        setStartError(err?.message || "You already have the maximum number of instances running. Stop one before starting another.");
+        setState("LIMIT");
       } else {
+        setStartError(err?.message || null);
         setState("FAILED");
       }
     }
@@ -675,7 +683,7 @@ export default function InstancePanel({
         </span>
       </div>
       <div style={{ fontSize: 12, color: c.muted, marginBottom: 12 }}>
-        The challenge environment could not start. Try again.
+        {startError || "The challenge environment could not start. Try again."}
       </div>
       <button
         onClick={handleStart}
@@ -687,6 +695,33 @@ export default function InstancePanel({
         }}
       >
         Retry
+      </button>
+    </div>
+  );
+
+  // Per-user instance limit reached — distinct from a start failure: the user
+  // simply has too many instances running and must stop one first.
+  if (state === "LIMIT") return (
+    <div style={{ ...cardStyle, border: `1px solid ${c.yellow}40` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <AlertCircle size={14} color={c.yellow} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: c.yellow }}>
+          Instance Limit Reached
+        </span>
+      </div>
+      <div style={{ fontSize: 12, color: c.muted, marginBottom: 12 }}>
+        {startError || "Stop one of your running instances before starting another."}
+      </div>
+      <button
+        onClick={() => setState("IDLE")}
+        disabled={busy}
+        style={{
+          background: c.bg, border: `1px solid ${c.cardBorder}`,
+          color: c.secondary, borderRadius: 5,
+          padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+        }}
+      >
+        OK
       </button>
     </div>
   );
