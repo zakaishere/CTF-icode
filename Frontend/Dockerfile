@@ -13,13 +13,9 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-# If node_modules/ is present in the build context (not excluded by .dockerignore),
-# we copy it directly — avoiding any network download. Fallback: install from registry.
 # --legacy-peer-deps: next-themes@0.3.0 hasn't declared React 19 support yet.
 # --mount=type=cache: reuses the npm download cache across builds.
-COPY node_modules ./node_modules
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --legacy-peer-deps --prefer-offline || \
     npm ci --legacy-peer-deps
 
 # ── Stage 2: build ───────────────────────────────────────────────────────────
