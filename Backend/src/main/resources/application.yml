@@ -1,0 +1,166 @@
+spring:
+  application:
+    name: icode-ctf
+
+  devtools:
+    restart:
+      exclude: "*.json"
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/psp_db?currentSchema=icode_ctf}
+    username: ${DB_USERNAME:psp_user}
+    password: ${DB_PASSWORD:psp_password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:50}
+      minimum-idle: 10
+      connection-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      pool-name: IcodeCTFPool
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+        jdbc:
+          batch_size: 20
+          order_inserts: true
+          order_updates: true
+        generate_statistics: false
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp:
+        auth: true
+        starttls.enable: true
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=60s
+    cache-names:
+      - scoreboard
+      - challenges
+      - competition-status
+      - user-profile
+      - leaderboard
+      - hint-unlocks
+
+cors:
+  # Comma-separated list of allowed origins for the frontend.
+  # MUST be overridden via CORS_ALLOWED_ORIGINS in production.
+  # Example: https://ctf.myuniversity.ma,http://ctf.myuniversity.ma
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+
+server:
+  address: 0.0.0.0
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain
+    min-response-size: 1024
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    accept-count: 100
+    connection-timeout: 20000
+
+app:
+  security:
+    # ── Email verification toggle ─────────────────────────────────────────────
+    # false → require OTP verification after registration (PRODUCTION DEFAULT).
+    # true  → skip email OTP; use only for local development.
+    # NEVER set to true in production — students can register with fake emails.
+    # ─────────────────────────────────────────────────────────────────────────
+    disable-verification: ${APP_SECURITY_DISABLE_VERIFICATION:false}
+
+jwt:
+  # REQUIRED — no default. Generate with: openssl rand -base64 32
+  # App will refuse to start if this is missing or starts with "CHANGE_ME".
+  secret: ${JWT_SECRET:long_secret_with_nothing_in_it_i_will_change_it_later}
+  expiration-ms: ${JWT_EXPIRY_MS:86400000}
+
+ctf:
+  # REQUIRED — no default. Generate with: openssl rand -base64 32
+  # Used to derive per-team dynamic flags. If not set, app refuses to start.
+  flag-secret: ${CTF_FLAG_SECRET:secret_flag_iwill_change_later_i_promise}
+  instance:
+    host: ${CTF_INSTANCE_HOST:localhost}
+    # Host used for internal health-check probes (TCP + HTTP) when spawning instances.
+    # When the backend runs inside Docker, challenge containers publish their ports on
+    # the HOST — set to "host.docker.internal" (via docker-compose extra_hosts).
+    # For bare-metal deployments, keep the default "localhost".
+    health-check-host: ${CTF_HEALTH_CHECK_HOST:localhost}
+    port:
+      min: ${CTF_PORT_MIN:32000}
+      max: ${CTF_PORT_MAX:33000}
+    network:
+      prefix: ctf-net-
+    cleanup-interval-ms: 60000
+  upload:
+    path: ${CTF_UPLOAD_PATH:/tmp/ctf-uploads}
+  images:
+    prefix: icode-ctf
+  build:
+    # Pwn challenges install gcc/libc/socat via apt-get inside the container —
+    # 300 s is frequently not enough on a cold cache. 600 s gives a full minute
+    # of headroom while still bounding runaway builds.
+    timeout-seconds: 600
+    max-zip-size-mb: 100
+
+docker:
+  host: ${DOCKER_HOST:unix:///var/run/docker.sock}
+  tls:
+    verify: ${DOCKER_TLS_VERIFY:false}
+    cert-path: ${DOCKER_CERT_PATH:}
+
+management:
+  endpoints:
+    web:
+      # Only health is public. metrics/prometheus require ADMIN role (enforced in SecurityConfig).
+      exposure:
+        include: health,metrics,prometheus
+      base-path: /api/actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    root: WARN
+    com.university.platform: INFO
+    com.university.platform.ctf: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.web.socket: WARN
+    org.springframework.messaging: WARN
+    org.springframework.security: WARN
+    com.github.dockerjava: WARN
+
+  pattern:
+    console: "%d{HH:mm:ss} %highlight(%-5level) %cyan([%thread]) %yellow(%logger{20}) - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] [%X{requestId}] %logger{36} - %msg%n"
+
+  file:
+    name: logs/icode-ctf.log
+
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7

@@ -1,0 +1,155 @@
+# =============================================================================
+#  icode-ctf — Docker Compose
+#
+#  Architecture:
+#    nginx (:80) → reverse proxy → frontend (:3000) + backend (:8080)
+#    backend  → db (:5432) for persistence
+#    backend  → /var/run/docker.sock to spawn challenge containers as HOST siblings
+#
+#  ⚠ DOCKER SOCKET + UPLOAD PATH:
+#    The backend mounts the host Docker socket to spawn challenge containers.
+#    Challenge containers are started by the HOST Docker daemon, so the upload
+#    path MUST be the SAME absolute path on both the host and inside the
+#    backend container. We use a bind mount for this:
+#      /data/ctf-uploads (host) → /data/ctf-uploads (backend container)
+#    Create this directory on the host before running:
+#      sudo mkdir -p /data/ctf-uploads && sudo chmod 777 /data/ctf-uploads
+#
+#  Quick start:
+#    cp .env.example .env   # fill in JWT_SECRET and CTF_FLAG_SECRET
+#    make up
+# =============================================================================
+
+services:
+
+  # ── Database ────────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: icode-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-icode_ctf}
+      POSTGRES_USER:     ${DB_USERNAME:-icode_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Init script runs once on first container creation
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    networks:
+      - icode-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-icode_user} -d ${DB_NAME:-icode_ctf}"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+      start_period: 20s
+
+  # ── Backend (Spring Boot) ───────────────────────────────────────────────────
+  backend:
+    build:
+      context:    ./Backend
+      dockerfile: Dockerfile
+    image: icode-ctf-backend:latest
+    container_name: icode-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Override localhost DB URL with the Docker service name
+      DB_URL:             jdbc:postgresql://db:5432/${DB_NAME:-icode_ctf}?currentSchema=icode_ctf
+      # Backend spawns challenge containers via the HOST docker daemon
+      DOCKER_HOST:        unix:///var/run/docker.sock
+      CTF_INSTANCE_HOST:  ${CTF_INSTANCE_HOST:-localhost}
+      CTF_UPLOAD_PATH:    ${CTF_UPLOAD_PATH:-/home/zakariae-elhamadani/ctf-uploads}
+      # Disable mail health check (no SMTP in dev; avoids health DOWN)
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+      # Health-check probes (waitForPort/waitForHttp) must reach the HOST's published
+      # ports, not the backend container's own loopback. host.docker.internal resolves
+      # to the host gateway via the extra_hosts entry below.
+      CTF_HEALTH_CHECK_HOST: host.docker.internal
+    extra_hosts:
+      # Allows the backend container to reach the HOST (for challenge port probes).
+      # host-gateway is a Docker built-in alias for the host's gateway IP (Linux ≥20.10).
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Docker socket — lets the backend spawn sibling containers on the host
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Bind mount: same absolute path on host AND in container (required for
+      # docker build contexts that the HOST daemon resolves on the HOST FS).
+      # Value comes from CTF_UPLOAD_PATH in .env — must be identical on host and in container.
+      - ${CTF_UPLOAD_PATH:-/home/zakariae-elhamadani/ctf-uploads}:${CTF_UPLOAD_PATH:-/home/zakariae-elhamadani/ctf-uploads}
+    networks:
+      - icode-net
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/actuator/health || exit 1"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 60s
+
+  # ── Frontend (Next.js standalone) ──────────────────────────────────────────
+  frontend:
+    build:
+      context:    ./Frontend
+      dockerfile: Dockerfile
+    image: icode-ctf-frontend:latest
+    container_name: icode-frontend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      # These tell the browser where to find the API and WS endpoints.
+      # Since nginx is the entry point, both point to the nginx host.
+      NEXT_PUBLIC_API_BASE_URL: ""
+    networks:
+      - icode-net
+    depends_on:
+      - backend
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ || exit 1"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 30s
+
+  # ── Nginx (reverse proxy) ───────────────────────────────────────────────────
+  nginx:
+    build:
+      context:    ./nginx
+      dockerfile: Dockerfile
+    image: icode-ctf-nginx:latest
+    container_name: icode-nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    networks:
+      - icode-net
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health || exit 1"]
+      interval: 30s
+      timeout:  5s
+      retries:  3
+      start_period: 10s
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  db-data:
+    name: icode-db-data
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  icode-net:
+    name: icode-net
+    driver: bridge
