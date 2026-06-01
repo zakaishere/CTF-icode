@@ -11,6 +11,13 @@ import {
 } from "@/lib/api";
 import { toast } from "@/components/ui/PSPToast";
 
+// Backend uses LocalDateTime (no timezone) — always treat as UTC so the
+// countdown is correct regardless of the user's local timezone.
+function expiryMs(ts: string): number {
+  const s = /[Z+]|\d{2}:\d{2}$/.test(ts) ? ts : ts + "Z";
+  return new Date(s).getTime();
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 // Time-based startup messages — chosen by elapsed seconds since STARTING began,
@@ -94,7 +101,7 @@ function CountdownBar({
   const [total, setTotal]         = useState(1);
 
   useEffect(() => {
-    const expMs = new Date(expiresAt).getTime();
+    const expMs = expiryMs(expiresAt);
     setTotal(Math.max(1, Math.round((expMs - Date.now()) / 1000)));
     const calc = () => Math.max(0, Math.floor((expMs - Date.now()) / 1000));
     setRemaining(calc());
@@ -238,7 +245,7 @@ export default function InstancePanel({
   // without waiting for the backend cleanup job (which can lag up to 60s).
   useEffect(() => {
     if (state !== "RUNNING" || !instance?.expiresAt) return;
-    const ms = new Date(instance.expiresAt).getTime() - Date.now();
+    const ms = expiryMs(instance.expiresAt) - Date.now();
     if (ms <= 0) { setState("EXPIRED"); return; }
     const t = setTimeout(() => setState("EXPIRED"), ms);
     return () => clearTimeout(t);
@@ -252,7 +259,7 @@ export default function InstancePanel({
     const t = setInterval(() => {
       getCtfInstanceStatus(challengeId, teamId).then(s => {
         if (s && s.status === "RUNNING" && s.expiresAt &&
-            new Date(s.expiresAt).getTime() > Date.now()) {
+            expiryMs(s.expiresAt) > Date.now()) {
           instanceId.current = s.instanceId;
           setInstance(s);
           setState("RUNNING");
@@ -546,7 +553,7 @@ export default function InstancePanel({
     const maxRenewals   = 3;
     const renewsLeft    = maxRenewals - (instance.renewalCount ?? 0);
     const urgentBorder  = instance.expiresAt &&
-      (new Date(instance.expiresAt).getTime() - Date.now()) < 300_000;
+      (expiryMs(instance.expiresAt) - Date.now()) < 300_000;
 
     return (
       <div style={{
