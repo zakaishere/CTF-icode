@@ -587,6 +587,11 @@ public class CTFInstanceService {
                 txTemplate.executeWithoutResult(status ->
                     instanceRepo.findById(instanceId).ifPresent(inst -> {
                         inst.setStatus("RUNNING");
+                        // Start the expiry clock NOW that the instance is actually usable —
+                        // not when the DB record was created. Docker pull/build/start time
+                        // must not eat into the player's session.
+                        inst.setExpiresAt(LocalDateTime.now()
+                                .plusMinutes(configService.getConfig().getMaxInstanceDurationMinutes()));
                         inst.setContainerId(cid);
                         inst.setNetworkId(nid);
                         inst.setContainerName(cname);
@@ -608,7 +613,9 @@ public class CTFInstanceService {
                                 .renewalCount(0)
                                 .build());
 
-                log.info("CTF instance {} RUNNING port={} network={}", instanceId, port, networkName);
+                log.info("CTF instance {} RUNNING port={} network={} expires={}",
+                        instanceId, port, networkName,
+                        updated != null ? updated.getExpiresAt() : null);
 
             } else {
                 // Mock mode
@@ -618,6 +625,8 @@ public class CTFInstanceService {
                 txTemplate.executeWithoutResult(s ->
                     instanceRepo.findById(instanceId).ifPresent(inst -> {
                         inst.setStatus("RUNNING");
+                        inst.setExpiresAt(LocalDateTime.now()
+                                .plusMinutes(configService.getConfig().getMaxInstanceDurationMinutes()));
                         inst.setConnectionString(connStr);
                         instanceRepo.save(inst);
                     })

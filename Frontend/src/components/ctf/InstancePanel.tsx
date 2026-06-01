@@ -13,16 +13,25 @@ import { toast } from "@/components/ui/PSPToast";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STARTING_MESSAGES = [
-  "Pulling layers...",
-  "Configuring environment...",
-  "Injecting challenge...",
-  "Almost ready...",
+// Time-based startup messages — chosen by elapsed seconds since STARTING began,
+// so the player gets feedback that matches how long Docker actually takes.
+const STARTING_MESSAGES: { until: number; text: string }[] = [
+  { until: 10,       text: "Starting container..." },
+  { until: 30,       text: "Pulling challenge environment..." },
+  { until: 60,       text: "Almost ready..." },
+  { until: Infinity, text: "Taking longer than usual — still working..." },
 ];
+
+function startingMessage(elapsedSeconds: number): string {
+  return (STARTING_MESSAGES.find(m => elapsedSeconds < m.until)
+    ?? STARTING_MESSAGES[STARTING_MESSAGES.length - 1]).text;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type PanelState = "IDLE" | "STARTING" | "RUNNING" | "FAILED" | "EXPIRED" | "AT_CAPACITY";
+// CHECKING = first status fetch in flight; we don't know yet whether an instance
+// exists, so we must NOT show the "Start Instance" button (would be misleading).
+type PanelState = "CHECKING" | "IDLE" | "STARTING" | "RUNNING" | "FAILED" | "EXPIRED" | "AT_CAPACITY";
 
 export interface InstancePanelProps {
   challengeId:    string;
@@ -167,10 +176,12 @@ export default function InstancePanel({
 }: InstancePanelProps) {
   const c = dark ? DARK : LIGHT;
 
-  const [state, setState]     = useState<PanelState>("IDLE");
+  // Start in CHECKING (when an instance is required) so the IDLE "Start Instance"
+  // button never flashes before we've fetched the real status on (re)open.
+  const [state, setState]     = useState<PanelState>(requiresInstance ? "CHECKING" : "IDLE");
   const [instance, setInstance] = useState<CTFInstanceResponse | null>(null);
   const [busy, setBusy]       = useState(false);
-  const [msgIdx, setMsgIdx]   = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   const [copied, setCopied]   = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -184,12 +195,45 @@ export default function InstancePanel({
 
   const sessionKey = `ctf-instance-${challengeId}${teamId ? `-${teamId}` : ""}`;
 
-  // ── Cycle starting messages ──────────────────────────────────────────────
+  // ── Track elapsed time while STARTING (drives the time-based messages) ─────
   useEffect(() => {
-    if (state !== "STARTING") return;
-    const t = setInterval(() => setMsgIdx(i => (i + 1) % STARTING_MESSAGES.length), 2000);
+    if (state !== "STARTING") { setElapsed(0); return; }
+    const start = Date.now();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, [state]);
+
+  // ── Client-side expiry: flip to EXPIRED the instant the clock runs out, ────
+  // without waiting for the backend cleanup job (which can lag up to 60s).
+  useEffect(() => {
+    if (state !== "RUNNING" || !instance?.expiresAt) return;
+    const ms = new Date(instance.expiresAt).getTime() - Date.now();
+    if (ms <= 0) { setState("EXPIRED"); return; }
+    const t = setTimeout(() => setState("EXPIRED"), ms);
+    return () => clearTimeout(t);
+  }, [state, instance?.expiresAt]);
+
+  // ── Fallback reconcile poll while EXPIRED (in case the WS update is missed).
+  // Only reverts to RUNNING if the backend genuinely has a non-expired instance
+  // (e.g. renewed elsewhere) — never flips back to a stale, already-expired one.
+  useEffect(() => {
+    if (state !== "EXPIRED") return;
+    const t = setInterval(() => {
+      getCtfInstanceStatus(challengeId, teamId).then(s => {
+        if (s && s.status === "RUNNING" && s.expiresAt &&
+            new Date(s.expiresAt).getTime() > Date.now()) {
+          instanceId.current = s.instanceId;
+          setInstance(s);
+          setState("RUNNING");
+        } else if (!s || s.status === "EXPIRED" || s.status === "STOPPED") {
+          sessionStorage.removeItem(sessionKey);
+        }
+      }).catch(() => { /* transient — keep showing EXPIRED */ });
+    }, 15_000);
+    return () => clearInterval(t);
+  }, [state, challengeId, teamId, sessionKey]);
 
   // ── WebSocket subscription ────────────────────────────────────────────────
   const connectWS = useCallback(() => {
@@ -267,7 +311,7 @@ export default function InstancePanel({
   const handleStart = async () => {
     setBusy(true);
     setState("STARTING");
-    setMsgIdx(0);
+    setElapsed(0);
     try {
       const res = await startCTFInstance(challengeId, {
         competitionId: competitionId ?? undefined,
@@ -339,6 +383,29 @@ export default function InstancePanel({
     padding:      16,
     marginBottom: 16,
   };
+
+  // First status fetch in flight — show a neutral loader, never the Start button.
+  if (state === "CHECKING") {
+    if (compactIdle) return (
+      <button type="button" className="twin-action" disabled>
+        <span className="glyph">
+          <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+        </span>
+        <span className="lbl">
+          <span className="title">Checking…</span>
+          <span className="sub">instance status</span>
+        </span>
+      </button>
+    );
+    return (
+      <div style={cardStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Loader2 size={14} color={c.blue} style={{ animation: "spin 1s linear infinite" }} />
+          <span style={{ fontSize: 12, color: c.secondary }}>Checking instance status…</span>
+        </div>
+      </div>
+    );
+  }
 
   if (state === "IDLE") {
     // Compact twin-button variant — used inside the challenge modal so the
@@ -430,7 +497,7 @@ export default function InstancePanel({
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: c.blue, animation: "ctf-pulse-dot 1.2s ease infinite" }} />
         <div style={{ fontSize: 12, color: c.secondary }}>
-          {STARTING_MESSAGES[msgIdx]}
+          {startingMessage(elapsed)}
         </div>
       </div>
       <div style={{ fontSize: 11, color: c.muted, marginTop: 4 }}>
