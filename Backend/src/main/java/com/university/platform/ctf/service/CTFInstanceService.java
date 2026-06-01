@@ -158,7 +158,9 @@ public class CTFInstanceService {
         var config = configService.getConfig();
 
         long userActive = instanceRepo.findByUserIdAndStatusIn(userId,
-                List.of("STARTING", "RUNNING")).size();
+                List.of("STARTING", "RUNNING")).stream()
+                .filter(i -> i.getExpiresAt() == null || i.getExpiresAt().isAfter(LocalDateTime.now()))
+                .count();
         if (userActive >= config.getMaxInstancesPerUser()) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Instance limit reached (" + config.getMaxInstancesPerUser() + ").");
