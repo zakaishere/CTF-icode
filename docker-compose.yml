@@ -164,6 +164,10 @@ services:
     mem_limit: 96m
     ports:
       - "${HTTP_PORT:-80}:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt/live/icode-ctf.hared.tech/fullchain.pem:/etc/ssl/certs/fullchain.pem:ro
+      - /etc/letsencrypt/live/icode-ctf.hared.tech/privkey.pem:/etc/ssl/private/privkey.pem:ro
     networks:
       - icode-net
     depends_on:
