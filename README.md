@@ -14,45 +14,70 @@ icode-ctf/
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-- Java 17+
-- PostgreSQL 16
-- Node.js 20+
-- Docker (for CTF challenge instances)
-
-### 1 — Database
-
-```sql
--- Connect as a superuser
-CREATE SCHEMA IF NOT EXISTS icode_ctf;
--- Then run:
-psql -U psp_user -d psp_db -f Backend/src/main/resources/db/schema.sql
-```
-
-### 2 — Backend
+## Run it (that's it)
 
 ```bash
-cd Backend
-cp ../../.env.example .env          # fill in secrets
-./mvnw spring-boot:run
-# → http://localhost:8080
+git clone <repo>
+cd CTF-icode
+docker compose up -d
 ```
 
-Default seed admin (dev profile):  
-`admin@icode-ctf.local` / `Admin1234!`
+Open **http://localhost** and log in:
 
-### 3 — Frontend
+```
+admin@icode-ctf.local / Admin123!
+```
+
+That's the whole setup — no `.env`, no manual database, no secret generation.
+Everything has a safe default. The database schema and default admin are
+created automatically on first boot, and email verification is disabled by
+default so you can register players without SMTP.
+
+> First build takes a few minutes. Needs Docker + Docker Compose, ~2 GB RAM,
+> and ports `80` and `32000–33000` open.
+
+### Common commands
+
+| Command | What it does |
+|---|---|
+| `docker compose up -d` | Start everything |
+| `docker compose logs -f` | Watch live logs |
+| `docker compose down` | Stop everything |
+| `docker compose up -d --build` | Update after `git pull` |
+| `docker compose down -v` | ⚠ Stop **and delete all data** |
+
+(`make up`, `make logs-b`, `make down`, etc. are shortcuts for the same.)
+
+### Production deployment
+
+Copy `.env.example` to `.env` and set at least your public IP so challenge
+instances are reachable, plus strong secrets:
 
 ```bash
-cd Frontend
-npm install
-cp ../.env.example .env.local       # NEXT_PUBLIC_API_BASE_URL usually blank
-npm run dev
-# → http://localhost:3000
+cp .env.example .env
+nano .env        # set CTF_INSTANCE_HOST, JWT_SECRET, CTF_FLAG_SECRET, DB_PASSWORD
+docker compose up -d --build
 ```
+
+Then change the default admin password immediately after first login.
+
+---
+
+## Local development (without Docker)
+
+Prerequisites: Java 17+, PostgreSQL 16, Node.js 20+, Docker (for challenge
+instances).
+
+```bash
+# Backend  → http://localhost:8080
+cd Backend && ./mvnw spring-boot:run
+
+# Frontend → http://localhost:3000
+cd Frontend && npm install && npm run dev
+```
+
+The backend reads config from environment variables (see `.env.example`); the
+defaults in `application.yml` point at a local Postgres on `localhost:5432`.
 
 ---
 

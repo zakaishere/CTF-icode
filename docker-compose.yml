@@ -1,23 +1,26 @@
 # =============================================================================
 #  icode-ctf — Docker Compose
 #
+#  ZERO-CONFIG: just run `docker compose up -d`. Every value has a safe default,
+#  so no .env file is required for local / first-time use.
+#
+#  PRODUCTION: copy .env.example → .env and set CTF_INSTANCE_HOST (your public
+#  IP/domain) plus strong JWT_SECRET / CTF_FLAG_SECRET / DB_PASSWORD. Any value
+#  you put in .env automatically overrides the defaults below.
+#
 #  Architecture:
 #    nginx (:80) → reverse proxy → frontend (:3000) + backend (:8080)
 #    backend  → db (:5432) for persistence
 #    backend  → /var/run/docker.sock to spawn challenge containers as HOST siblings
 #
-#  ⚠ DOCKER SOCKET + UPLOAD PATH:
-#    The backend mounts the host Docker socket to spawn challenge containers.
-#    Challenge containers are started by the HOST Docker daemon, so the upload
-#    path MUST be the SAME absolute path on both the host and inside the
-#    backend container. We use a bind mount for this:
-#      /data/ctf-uploads (host) → /data/ctf-uploads (backend container)
-#    Create this directory on the host before running:
-#      sudo mkdir -p /data/ctf-uploads && sudo chmod 777 /data/ctf-uploads
+#  ⚠ UPLOAD PATH (do not change to a named volume):
+#    The backend spawns challenge containers via the HOST Docker daemon, so the
+#    upload directory MUST be the SAME absolute path on the host and inside the
+#    backend container — hence the bind mount below. Docker auto-creates the
+#    host directory on first run.
 #
-#  Quick start:
-#    cp .env.example .env   # fill in JWT_SECRET and CTF_FLAG_SECRET
-#    make up
+#  Default admin (created by docker/db/init.sql):
+#    admin@icode-ctf.local / Admin123!  — change the password after first login.
 # =============================================================================
 
 services:
@@ -27,14 +30,14 @@ services:
     image: postgres:16-alpine
     container_name: icode-db
     restart: unless-stopped
-    env_file: .env
     environment:
       POSTGRES_DB:       ${DB_NAME:-icode_ctf}
       POSTGRES_USER:     ${DB_USERNAME:-icode_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-icode_local_dev_pass}
     volumes:
       - db-data:/var/lib/postgresql/data
-      # Init script runs once on first container creation
+      # Init script runs once on first container creation: creates the schema,
+      # all tables, and the default admin account.
       - ./docker/db/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     networks:
       - icode-net
@@ -53,30 +56,54 @@ services:
     image: icode-ctf-backend:latest
     container_name: icode-backend
     restart: unless-stopped
-    env_file: .env
+    # Optional: any extra vars in .env (e.g. JWT_EXPIRY_MS, DB_POOL_SIZE,
+    # DOCKER_TLS_VERIFY) are injected too. Absent .env is fine — required: false.
+    env_file:
+      - path: .env
+        required: false
     environment:
-      # Override localhost DB URL with the Docker service name
-      DB_URL:             jdbc:postgresql://db:5432/${DB_NAME:-icode_ctf}?currentSchema=icode_ctf
-      # Backend spawns challenge containers via the HOST docker daemon
-      DOCKER_HOST:        unix:///var/run/docker.sock
-      CTF_INSTANCE_HOST:  ${CTF_INSTANCE_HOST:-localhost}
-      CTF_UPLOAD_PATH:    ${CTF_UPLOAD_PATH:-/data/ctf-uploads}
-      # Disable mail health check (no SMTP in dev; avoids health DOWN)
+      # Database — service name "db", schema "icode_ctf". Defaults match the db service.
+      DB_URL:      jdbc:postgresql://db:5432/${DB_NAME:-icode_ctf}?currentSchema=icode_ctf
+      DB_USERNAME: ${DB_USERNAME:-icode_user}
+      DB_PASSWORD: ${DB_PASSWORD:-icode_local_dev_pass}
+
+      # Secrets — these dev defaults let the platform boot with zero config.
+      # ⚠ Override with strong values in .env before any public deployment.
+      JWT_SECRET:      ${JWT_SECRET:-dev_only_jwt_secret_override_in_production_0001}
+      CTF_FLAG_SECRET: ${CTF_FLAG_SECRET:-dev_only_flag_secret_override_in_production_01}
+
+      # Public IP/host players use to reach challenge instances (nc <host> <port>).
+      # Defaults to localhost; set CTF_INSTANCE_HOST in .env for production.
+      CTF_INSTANCE_HOST: ${CTF_INSTANCE_HOST:-localhost}
+      CTF_PORT_MIN:      ${CTF_PORT_MIN:-32000}
+      CTF_PORT_MAX:      ${CTF_PORT_MAX:-33000}
+
+      # Backend spawns challenge containers via the HOST docker daemon.
+      DOCKER_HOST:     unix:///var/run/docker.sock
+      CTF_UPLOAD_PATH: ${CTF_UPLOAD_PATH:-/data/ctf-uploads}
+
+      # Email verification off by default so registration works without SMTP.
+      # Set APP_SECURITY_DISABLE_VERIFICATION=false + MAIL_* in .env for production.
+      APP_SECURITY_DISABLE_VERIFICATION: ${APP_SECURITY_DISABLE_VERIFICATION:-true}
+      MAIL_HOST:     ${MAIL_HOST:-}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
-      # Health-check probes (waitForPort/waitForHttp) must reach the HOST's published
-      # ports, not the backend container's own loopback. host.docker.internal resolves
-      # to the host gateway via the extra_hosts entry below.
+
+      # CORS — allow localhost by default; set CORS_ALLOWED_ORIGINS in .env for prod.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:3000}
+
+      # Health-check probes for spawned instances must reach the HOST's published
+      # ports. host.docker.internal resolves to the host gateway via extra_hosts.
       CTF_HEALTH_CHECK_HOST: host.docker.internal
     extra_hosts:
-      # Allows the backend container to reach the HOST (for challenge port probes).
-      # host-gateway is a Docker built-in alias for the host's gateway IP (Linux ≥20.10).
+      # Lets the backend container reach the HOST (for challenge port probes).
       - "host.docker.internal:host-gateway"
     volumes:
-      # Docker socket — lets the backend spawn sibling containers on the host
+      # Docker socket — lets the backend spawn sibling containers on the host.
       - /var/run/docker.sock:/var/run/docker.sock
-      # Bind mount: same absolute path on host AND in container (required for
-      # docker build contexts that the HOST daemon resolves on the HOST FS).
-      # Value comes from CTF_UPLOAD_PATH in .env — must be identical on host and in container.
+      # Bind mount: SAME absolute path on host AND in container (required so the
+      # HOST docker daemon can resolve build contexts). Docker creates it on first run.
       - ${CTF_UPLOAD_PATH:-/data/ctf-uploads}:${CTF_UPLOAD_PATH:-/data/ctf-uploads}
     networks:
       - icode-net
@@ -100,11 +127,10 @@ services:
     image: icode-ctf-frontend:latest
     container_name: icode-frontend
     restart: unless-stopped
-    env_file: .env
     environment:
       NODE_ENV: production
-      # These tell the browser where to find the API and WS endpoints.
-      # Since nginx is the entry point, both point to the nginx host.
+      # Empty → the browser uses same-origin relative URLs, which nginx proxies
+      # to the backend. No need to know the public IP at build time.
       NEXT_PUBLIC_API_BASE_URL: ""
     networks:
       - icode-net

@@ -15,12 +15,7 @@ help: ## Show this help
 setup: ## First-time setup (creates .env, upload dir) — then runs make up
 	@bash setup.sh
 
-up: ## Build images (if needed) and start all services
-	@if [ ! -f .env ]; then \
-		echo "❌  .env not found. Run: bash setup.sh"; \
-		exit 1; \
-	fi
-	@mkdir -p /data/ctf-uploads && chmod 777 /data/ctf-uploads
+up: ## Build images (if needed) and start all services (no .env needed)
 	$(COMPOSE) up -d --build
 
 down: ## Stop and remove containers (keeps volumes)
