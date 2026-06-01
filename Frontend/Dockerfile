@@ -28,7 +28,8 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 # ── Stage 3: run ─────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner

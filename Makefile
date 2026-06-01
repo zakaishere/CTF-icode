@@ -1,19 +1,26 @@
 # icode-ctf — Docker Compose shortcuts
-# Usage: make <target>
+# First time on a new server: bash setup.sh
+# After that: make up
 
 COMPOSE = docker compose
-BACKEND_CONTAINER  = icode-backend
-DB_CONTAINER       = icode-db
+BACKEND_CONTAINER = icode-backend
+DB_CONTAINER      = icode-db
 
-.PHONY: up down restart rebuild logs logs-b logs-f ps clean shell-b shell-db help
+.PHONY: up down restart rebuild logs logs-b logs-f logs-n logs-db ps clean shell-b shell-db setup help
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-up: ## Build images (if needed) and start all containers in the background
-	@echo "⚠  Ensure /data/ctf-uploads exists on the host:"
-	@echo "   sudo mkdir -p /data/ctf-uploads && sudo chmod 777 /data/ctf-uploads"
+setup: ## First-time setup (creates .env, upload dir) — then runs make up
+	@bash setup.sh
+
+up: ## Build images (if needed) and start all services
+	@if [ ! -f .env ]; then \
+		echo "❌  .env not found. Run: bash setup.sh"; \
+		exit 1; \
+	fi
+	@mkdir -p /data/ctf-uploads && chmod 777 /data/ctf-uploads
 	$(COMPOSE) up -d --build
 
 down: ## Stop and remove containers (keeps volumes)
@@ -44,8 +51,8 @@ logs-db: ## Tail database logs
 ps: ## Show container status
 	$(COMPOSE) ps
 
-clean: ## ⚠ DESTRUCTIVE: stop all containers AND delete volumes (data loss!)
-	@echo "WARNING: This will delete all database data and uploads!"
+clean: ## ⚠ DESTRUCTIVE: stop containers AND delete volumes (data loss!)
+	@echo "WARNING: This deletes all database data and uploads!"
 	@read -p "Type 'yes' to confirm: " yn; [ "$$yn" = "yes" ] || exit 1
 	$(COMPOSE) down -v
 
