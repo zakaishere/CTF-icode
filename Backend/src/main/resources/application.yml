@@ -118,6 +118,14 @@ ctf:
     # of headroom while still bounding runaway builds.
     timeout-seconds: 600
     max-zip-size-mb: 100
+  worker:
+    agent:
+      url: ${WORKER_AGENT_URL:}
+      key-id: ${WORKER_AGENT_KEY_ID:}
+      secret: ${WORKER_AGENT_SECRET:}
+      timeout-seconds: 30
+      poll-interval-ms: 2000
+      poll-max-attempts: 60
 
 docker:
   host: ${DOCKER_HOST:unix:///var/run/docker.sock}

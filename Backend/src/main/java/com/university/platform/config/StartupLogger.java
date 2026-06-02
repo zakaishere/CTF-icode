@@ -1,7 +1,9 @@
 package com.university.platform.config;
 
+import com.university.platform.ctf.config.WorkerAgentConfig;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -34,6 +36,9 @@ public class StartupLogger {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
+
+    @Autowired
+    private WorkerAgentConfig workerAgentConfig;
 
     /**
      * Runs before the application accepts any traffic.
@@ -78,6 +83,12 @@ public class StartupLogger {
         log.info("║ JWT Secret: {}", pad("✓ configured", 24) + "║");
         log.info("║ Flag Secret:{}", pad("✓ configured", 24) + "║");
         log.info("╚══════════════════════════════════════╝");
+        if (workerAgentConfig.isEnabled()) {
+            log.info("Worker Agent ENABLED: {}", workerAgentConfig.getUrl());
+            log.info("All Docker operations will use the remote agent");
+        } else {
+            log.info("Worker Agent DISABLED: using local Docker");
+        }
     }
 
     private String pad(String s, int len) {
