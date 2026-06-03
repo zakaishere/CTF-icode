@@ -32,6 +32,7 @@ public class WorkerAgentClient {
         this.config     = config;
         this.signer     = signer;
         this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
                 .build();
         this.objectMapper = new ObjectMapper();
