@@ -456,8 +456,11 @@ public class CTFInstanceService {
                 String protocol = connectionType(challenge);
 
                 var started = workerAgentClient.startInstance(
-                        imageName, inst.getTeamId(), challengeId, durationMinutes, protocol);
-                var ready = workerAgentClient.waitForInstanceReady(started.instanceId());
+                        imageName,
+                        inst.getTeamId() != null ? inst.getTeamId().toString() : null,
+                        challengeId.toString(),
+                        durationMinutes, protocol);
+                var ready = workerAgentClient.waitForReady(started.instanceId());
 
                 String connStr = TCP.equals(protocol)
                         ? ready.host() + ":" + ready.port()
@@ -465,7 +468,7 @@ public class CTFInstanceService {
                 LocalDateTime expiresAt = parseDateTime(ready.expiresAt());
                 final String finalConnStr = connStr;
                 final LocalDateTime finalExpiresAt = expiresAt;
-                final String agentInstanceId = ready.instanceId();
+                final String agentInstanceId = started.instanceId();
                 final int agentPort = ready.port();
 
                 USED_PORTS.remove(port); // release the locally reserved port; agent manages its own

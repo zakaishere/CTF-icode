@@ -45,6 +45,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // No servlet context-path — AntPathRequestMatcher matches full request URI as-is.
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/auth/**")).permitAll()
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/internal/**")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/actuator/health")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/actuator/**")).hasRole("ADMIN")
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/error")).permitAll()

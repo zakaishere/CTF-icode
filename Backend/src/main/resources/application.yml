@@ -118,6 +118,7 @@ ctf:
     # of headroom while still bounding runaway builds.
     timeout-seconds: 600
     max-zip-size-mb: 100
+  platform-internal-url: ${PLATFORM_INTERNAL_URL:http://localhost:8080}
   worker:
     agent:
       url: ${WORKER_AGENT_URL:}

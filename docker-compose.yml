@@ -88,6 +88,14 @@ services:
       DOCKER_HOST:     unix:///var/run/docker.sock
       CTF_UPLOAD_PATH: ${CTF_UPLOAD_PATH:-/data/ctf-uploads}
 
+      # Worker Agent — leave blank to use local Docker (default).
+      WORKER_AGENT_URL:        ${WORKER_AGENT_URL:-}
+      WORKER_AGENT_KEY_ID:     ${WORKER_AGENT_KEY_ID:-}
+      WORKER_AGENT_SECRET:     ${WORKER_AGENT_SECRET:-}
+      # Platform's own URL as seen from the agent server (used to serve ZIPs).
+      # Set to http://<PLATFORM_SERVER_IP>:8080 when agent is on a different host.
+      PLATFORM_INTERNAL_URL:   ${PLATFORM_INTERNAL_URL:-http://localhost:8080}
+
       # Email verification off by default so registration works without SMTP.
       # Set APP_SECURITY_DISABLE_VERIFICATION=false + MAIL_* in .env for production.
       APP_SECURITY_DISABLE_VERIFICATION: ${APP_SECURITY_DISABLE_VERIFICATION:-true}

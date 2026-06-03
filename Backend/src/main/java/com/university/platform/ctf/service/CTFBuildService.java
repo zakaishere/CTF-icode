@@ -43,6 +43,9 @@ public class CTFBuildService {
     @Value("${ctf.build.max-zip-size-mb:100}")
     private int maxZipSizeMb;
 
+    @Value("${ctf.platform-internal-url:http://localhost:8080}")
+    private String platformInternalUrl;
+
     public CTFBuildService(
             @Nullable DockerClient dockerClient,
             CTFStorageService storageService,
@@ -320,8 +323,8 @@ public class CTFBuildService {
             buildRepo.save(build);
             notifyBuild(build, null);
 
-            String zipUrl = "file://" + zipPath.toAbsolutePath();
-            String buildId = workerAgentClient.buildImage(build.getChallengeId(), zipUrl);
+            String zipUrl  = platformInternalUrl + "/api/internal/zip/" + build.getChallengeId();
+            String buildId = workerAgentClient.buildImage(build.getChallengeId().toString(), zipUrl);
             log.info("Remote build started for challenge {}: buildId={}", build.getChallengeId(), buildId);
 
             for (int i = 0; i < 200; i++) {
