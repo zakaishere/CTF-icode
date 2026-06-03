@@ -12,6 +12,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j
@@ -41,15 +42,19 @@ public class WorkerAgentClient {
     // ── Instance operations ────────────────────────────────────────────────────
 
     public StartResult startInstance(String image, String teamId, String challengeId,
-                                     int durationMinutes, String protocol) {
+                                     int durationMinutes, String protocol,
+                                     Map<String, String> env) {
         try {
-            byte[] body = objectMapper.writeValueAsBytes(Map.of(
-                    "image",            image != null ? image : "",
-                    "team_id",          teamId != null ? teamId : "",
-                    "challenge_id",     challengeId,
-                    "duration_minutes", durationMinutes,
-                    "protocol",         protocol != null ? protocol.toLowerCase() : "tcp"
-            ));
+            Map<String, Object> bodyMap = new LinkedHashMap<>();
+            bodyMap.put("image",            image != null ? image : "");
+            bodyMap.put("team_id",          teamId != null ? teamId : "");
+            bodyMap.put("challenge_id",     challengeId);
+            bodyMap.put("duration_minutes", durationMinutes);
+            bodyMap.put("protocol",         protocol != null ? protocol.toLowerCase() : "tcp");
+            if (env != null && !env.isEmpty()) {
+                bodyMap.put("env", env);
+            }
+            byte[] body = objectMapper.writeValueAsBytes(bodyMap);
             Map<String, Object> resp = post("/api/v1/instances/start", body);
             return new StartResult((String) resp.get("instance_id"), (String) resp.get("status"));
         } catch (WorkerAgentException e) {

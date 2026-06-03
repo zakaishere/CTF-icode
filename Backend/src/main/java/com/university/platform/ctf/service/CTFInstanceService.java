@@ -470,11 +470,25 @@ public class CTFInstanceService {
                 int durationMinutes = configService.getConfig().getMaxInstanceDurationMinutes();
                 String protocol = connectionType(challenge);
 
+                // Build env map: teacher-supplied vars + team-specific FLAG
+                Map<String, String> envMap = new java.util.LinkedHashMap<>();
+                String flagKey = challenge.getDockerFlagEnv() != null ? challenge.getDockerFlagEnv() : "FLAG";
+                if (challenge.getDockerEnvVars() != null) {
+                    challenge.getDockerEnvVars().forEach((k, v) -> {
+                        if (!k.equalsIgnoreCase(flagKey) && !k.equalsIgnoreCase("FLAG")) {
+                            envMap.put(k, v);
+                        }
+                    });
+                }
+                if (inst.getFlagValue() != null) {
+                    envMap.put(flagKey, inst.getFlagValue());
+                }
+
                 var started = workerAgentClient.startInstance(
                         imageName,
                         inst.getTeamId() != null ? inst.getTeamId().toString() : null,
                         challengeId.toString(),
-                        durationMinutes, protocol);
+                        durationMinutes, protocol, envMap);
                 var ready = workerAgentClient.waitForReady(started.instanceId());
 
                 String connStr = TCP.equals(protocol)
