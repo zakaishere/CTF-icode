@@ -50,7 +50,7 @@ public class WorkerAgentClient {
                     "duration_minutes", durationMinutes,
                     "protocol",         protocol != null ? protocol.toLowerCase() : "tcp"
             ));
-            Map<String, Object> resp = post("/api/v1/instances/start", body);
+            Map<String, Object> resp = post("/instances/start", body);
             return new StartResult((String) resp.get("instance_id"), (String) resp.get("status"));
         } catch (WorkerAgentException e) {
             throw e;
@@ -61,7 +61,7 @@ public class WorkerAgentClient {
 
     public InstanceStatus getInstanceStatus(String instanceId) {
         try {
-            Map<String, Object> resp = get("/api/v1/instances/" + instanceId + "/status");
+            Map<String, Object> resp = get("/instances/" + instanceId + "/status");
             Integer port = resp.get("port") != null ? ((Number) resp.get("port")).intValue() : null;
             return new InstanceStatus(
                     (String) resp.get("instance_id"),
@@ -104,7 +104,7 @@ public class WorkerAgentClient {
         try {
             byte[] body = objectMapper.writeValueAsBytes(
                     Map.of("reason", reason != null ? reason : "MANUAL"));
-            post("/api/v1/instances/" + instanceId + "/stop", body);
+            post("/instances/" + instanceId + "/stop", body);
         } catch (Exception e) {
             log.warn("Failed to stop agent instance {}: {}", instanceId, e.getMessage());
         }
@@ -114,7 +114,7 @@ public class WorkerAgentClient {
         try {
             byte[] body = objectMapper.writeValueAsBytes(
                     Map.of("extend_minutes", extendMinutes));
-            Map<String, Object> resp = post("/api/v1/instances/" + instanceId + "/extend", body);
+            Map<String, Object> resp = post("/instances/" + instanceId + "/extend", body);
             return (String) resp.get("new_expires_at");
         } catch (WorkerAgentException e) {
             throw e;
@@ -131,7 +131,7 @@ public class WorkerAgentClient {
                     "challenge_id", challengeId,
                     "zip_url",      zipUrl
             ));
-            Map<String, Object> resp = post("/api/v1/images/build", body);
+            Map<String, Object> resp = post("/images/build", body);
             return (String) resp.get("build_id");
         } catch (WorkerAgentException e) {
             throw e;
@@ -142,7 +142,7 @@ public class WorkerAgentClient {
 
     public Map<String, Object> getBuildStatus(String buildId) {
         try {
-            return get("/api/v1/images/build/" + buildId + "/status");
+            return get("/images/build/" + buildId + "/status");
         } catch (WorkerAgentException e) {
             throw e;
         } catch (Exception e) {
