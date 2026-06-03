@@ -14,7 +14,7 @@ public class WorkerAgentConfig {
     private String keyId = "";
     private String secret = "";
     private int timeoutSeconds = 30;
-    private int pollIntervalMs = 2000;
+    private int pollIntervalMs = 1000;
     private int pollMaxAttempts = 60;
 
     public boolean isEnabled() {

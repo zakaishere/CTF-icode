@@ -127,7 +127,9 @@ public class CTFInstanceService {
         instanceRepo.findOccupiedPorts().forEach(USED_PORTS::add);
         log.info("Synced {} occupied ports from DB.", USED_PORTS.size());
         if (dockerClient != null) {
-            exec.execute(this::prewarmAllImages);
+            if (!workerAgentConfig.isEnabled()) {
+                exec.execute(this::prewarmAllImages);
+            }
             exec.execute(this::reclaimOrphans); // reclaim any leaked containers/networks at boot
         }
     }
@@ -266,7 +268,7 @@ public class CTFInstanceService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your instance.");
         }
         if (workerAgentConfig.isEnabled() && instance.getContainerId() != null) {
-            workerAgentClient.stopInstance(instance.getContainerId(), "user_stop");
+            workerAgentClient.stopInstance(instance.getContainerId(), "MANUAL");
             instance.setStatus("STOPPED");
             instance.setStoppedAt(LocalDateTime.now());
             instanceRepo.save(instance);
@@ -294,7 +296,11 @@ public class CTFInstanceService {
                                 .status("EXPIRED")
                                 .build());
 
-                exec.execute(() -> teardownContainer(inst));
+                if (workerAgentConfig.isEnabled() && inst.getContainerId() != null) {
+                    workerAgentClient.stopInstance(inst.getContainerId(), "TIMEOUT");
+                } else {
+                    exec.execute(() -> teardownContainer(inst));
+                }
                 inst.setStatus("EXPIRED");
                 inst.setStoppedAt(LocalDateTime.now());
                 USED_PORTS.remove(inst.getAssignedPort());
@@ -398,7 +404,11 @@ public class CTFInstanceService {
     public void adminStopInstance(UUID instanceId) {
         CTFInstance instance = instanceRepo.findById(instanceId)
                 .orElseThrow(() -> new EntityNotFoundException("Instance not found."));
-        exec.execute(() -> teardownContainer(instance));
+        if (workerAgentConfig.isEnabled() && instance.getContainerId() != null) {
+            workerAgentClient.stopInstance(instance.getContainerId(), "ADMIN");
+        } else {
+            exec.execute(() -> teardownContainer(instance));
+        }
         instance.setStatus("STOPPED");
         instance.setStoppedAt(LocalDateTime.now());
         USED_PORTS.remove(instance.getAssignedPort());
@@ -422,7 +432,11 @@ public class CTFInstanceService {
             instance.setStoppedAt(LocalDateTime.now());
             USED_PORTS.remove(instance.getAssignedPort());
             instanceRepo.save(instance);
-            exec.execute(() -> teardownContainer(instance));
+            if (workerAgentConfig.isEnabled() && instance.getContainerId() != null) {
+                workerAgentClient.stopInstance(instance.getContainerId(), "SOLVED");
+            } else {
+                exec.execute(() -> teardownContainer(instance));
+            }
             log.info("Stopped instance {} for team {} after correct solve of challenge {}",
                     instance.getId(), teamId, challengeId);
             return true;
@@ -438,6 +452,7 @@ public class CTFInstanceService {
     }
 
     public void prewarmImages(List<String> imageRefs) {
+        if (workerAgentConfig.isEnabled()) return;
         for (String ref : imageRefs) {
             exec.execute(() -> pullAndTrackImage(ref));
         }
