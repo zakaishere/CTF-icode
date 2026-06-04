@@ -270,11 +270,7 @@ function LoginForm({ onForgot, onRegister }: { onForgot: () => void; onRegister:
         {...register("password")}
       />
 
-      <div className="ict-auth-meta" style={{ fontSize: 13 }}>
-        <label className="ict-checkbox">
-          <span className="ict-checkbox-box" />
-          <span style={{ color: "var(--ict-text-dim)" }}>Remember me</span>
-        </label>
+      <div className="ict-auth-meta" style={{ fontSize: 13, justifyContent: "flex-end" }}>
         <a
           onClick={onForgot}
           style={{ color: "var(--ict-accent-bright)", cursor: "pointer", fontSize: 12 }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bell, X, Lightbulb, AlertTriangle, Pause, Play, Snowflake, Flame,
   Megaphone, Trophy, Ban, Sparkles,
@@ -15,6 +15,19 @@ interface Props {
 
 export default function CTFNotificationBell({ notifications, unreadCount, onMarkAllRead }: Props) {
   const [open, setOpen] = useState(false);
+  const [isFlashing, setIsFlashing] = useState(false);
+  const prevUnreadRef = useRef(unreadCount);
+
+  // Flash the bell when a new notification arrives.
+  useEffect(() => {
+    if (unreadCount > prevUnreadRef.current) {
+      setIsFlashing(true);
+      const t = setTimeout(() => setIsFlashing(false), 700);
+      prevUnreadRef.current = unreadCount;
+      return () => clearTimeout(t);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   // Mark all read when the panel opens.
   useEffect(() => {
@@ -32,9 +45,10 @@ export default function CTFNotificationBell({ notifications, unreadCount, onMark
         style={{
           position: "relative",
           background: "transparent",
-          border: "1px solid rgba(130,165,255,0.18)",
+          border: `1px solid ${isFlashing ? "rgba(192,132,252,0.55)" : "rgba(130,165,255,0.18)"}`,
           borderRadius: 6, padding: "6px 8px", cursor: "pointer",
-          color: "#6b7ea3", display: "inline-flex", alignItems: "center", gap: 4,
+          color: isFlashing ? "#c084fc" : "#6b7ea3",
+          display: "inline-flex", alignItems: "center", gap: 4,
           transition: "border-color 150ms, color 150ms",
         }}
         onMouseEnter={e => {
@@ -42,11 +56,13 @@ export default function CTFNotificationBell({ notifications, unreadCount, onMark
           (e.currentTarget as HTMLButtonElement).style.color = "#a9b8d8";
         }}
         onMouseLeave={e => {
-          (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(130,165,255,0.18)";
-          (e.currentTarget as HTMLButtonElement).style.color = "#6b7ea3";
+          (e.currentTarget as HTMLButtonElement).style.borderColor = isFlashing ? "rgba(192,132,252,0.55)" : "rgba(130,165,255,0.18)";
+          (e.currentTarget as HTMLButtonElement).style.color = isFlashing ? "#c084fc" : "#6b7ea3";
         }}
       >
-        <Bell size={14} />
+        <span style={{ display: "inline-flex", animation: isFlashing ? "ctf-bell-ring 0.7s ease-in-out" : undefined }}>
+          <Bell size={14} />
+        </span>
         {unreadCount > 0 && (
           <span style={{
             position: "absolute", top: -4, right: -4,
@@ -167,6 +183,15 @@ export default function CTFNotificationBell({ notifications, unreadCount, onMark
               @keyframes ctf-panel-in {
                 from { transform: translateX(40px); opacity: 0; }
                 to   { transform: translateX(0); opacity: 1; }
+              }
+              @keyframes ctf-bell-ring {
+                0%   { transform: rotate(0deg); }
+                15%  { transform: rotate(-22deg); }
+                35%  { transform: rotate(20deg); }
+                55%  { transform: rotate(-12deg); }
+                75%  { transform: rotate(10deg); }
+                90%  { transform: rotate(-4deg); }
+                100% { transform: rotate(0deg); }
               }
             `}</style>
           </div>

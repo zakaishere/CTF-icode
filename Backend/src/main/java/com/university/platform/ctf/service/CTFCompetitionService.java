@@ -265,7 +265,8 @@ public class CTFCompetitionService {
 
     // ── Challenges ─────────────────────────────────────────────────────────────
 
-    @Cacheable(value = "challenges", key = "#competitionId + ':' + #userId")
+    @Cacheable(value = "challenges", key = "#competitionId + ':' + #userId",
+               unless = "#result.status == 'UPCOMING'")
     public CTFChallengeListResponse getCompetitionChallenges(UUID competitionId, UUID userId) {
         CTFCompetition comp = requireCompetition(competitionId);
         CTFCompetition.Status status = comp.computeStatus();

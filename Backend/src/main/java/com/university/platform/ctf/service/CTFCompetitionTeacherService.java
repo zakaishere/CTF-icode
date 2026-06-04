@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -265,6 +266,7 @@ public class CTFCompetitionTeacherService {
     }
 
     @Transactional
+    @CacheEvict(value = "challenges", allEntries = true)
     public CTFCompetitionDTO startManualCompetition(UUID id, UUID userId, boolean isAdmin) {
         CTFCompetition comp = loadOwned(id, userId, isAdmin);
         if (comp.getTimingMode() != CTFCompetition.TimingMode.MANUAL
