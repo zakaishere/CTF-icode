@@ -12,8 +12,10 @@ import java.util.UUID;
 public class CTFInstanceResponse {
 
     private UUID          instanceId;
-    /** "HTTP" or "TCP" */
+    /** "HTTP", "TCP", or "SSH" */
     private String        connectionType;
+    private String        sshUsername;
+    private String        sshPassword;
     /** Full URL for HTTP, "host:port" for TCP */
     private String        connectionString;
     /** Legacy — kept for backward compat; same as connectionString for HTTP */

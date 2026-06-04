@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import ChallengeBuildPanel from "@/features/ctf/admin/ChallengeBuildPanel";
 
-const CATEGORIES = ["CRYPTO", "FORENSICS", "REVERSE", "WEB", "PWN", "OSINT", "MISC"] as const;
+const CATEGORIES = ["CRYPTO", "FORENSICS", "REVERSE", "WEB", "PWN", "OSINT", "MISC", "LINUX"] as const;
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"] as const;
 
 // ── Color maps (shared) ─────────────────────────────────────────────────────
@@ -1050,6 +1050,8 @@ function ChallengePanel({
   const [form, setForm] = useState({
     title: existing?.title ?? "",
     authorName: existing?.authorName ?? "",
+    sshUsername: existing?.sshUsername ?? "",
+    sshPassword: existing?.sshPassword ?? "",
     description: existing?.description ?? "",
     category: existing?.category ?? "WEB",
     difficulty: (existing?.difficulty ?? "EASY") as "EASY" | "MEDIUM" | "HARD",
@@ -1072,7 +1074,7 @@ function ChallengePanel({
     requiresInstance: existing?.requiresInstance ?? false,
     dockerImage: existing?.dockerImage ?? "",
     // dockerExposedPort intentionally absent — auto-detected from Dockerfile EXPOSE at build time
-    connectionType: (existing?.connectionType === "TCP" ? "TCP" : "HTTP") as "HTTP" | "TCP",
+    connectionType: (["TCP","SSH"].includes(existing?.connectionType ?? "") ? existing!.connectionType! : "HTTP") as "HTTP" | "TCP" | "SSH",
     dockerFlagEnv: existing?.dockerFlagEnv ?? "FLAG",
     dockerMemoryMb: existing?.dockerMemoryMb ? String(existing.dockerMemoryMb) : "",
     dockerCpuPercent: existing?.dockerCpuPercent ? String(existing.dockerCpuPercent) : "",
@@ -1180,6 +1182,8 @@ function ChallengePanel({
         const payload: TeacherCtfChallengeCreateRequest = {
           title: form.title.trim(),
           authorName: form.authorName.trim() || undefined,
+          sshUsername: form.connectionType === "SSH" ? (form.sshUsername.trim() || undefined) : undefined,
+          sshPassword: form.connectionType === "SSH" ? (form.sshPassword.trim() || undefined) : undefined,
           description: form.description,
           category: form.category,
           difficulty: form.difficulty,
@@ -1223,6 +1227,8 @@ function ChallengePanel({
         const payload: TeacherCtfChallengeUpdateRequest = {
           title: form.title,
           authorName: form.authorName.trim() || undefined,
+          sshUsername: form.connectionType === "SSH" ? (form.sshUsername.trim() || undefined) : undefined,
+          sshPassword: form.connectionType === "SSH" ? (form.sshPassword.trim() || undefined) : undefined,
           description: form.description,
           category: form.category,
           difficulty: form.difficulty,
@@ -1800,10 +1806,11 @@ function DockerTab({
       {form.requiresInstance && (
         <>
           <Section icon={Network} title="Connection type" desc="How players will interact with the container.">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               {([
-                { id: "HTTP", label: "HTTP (Web)", desc: "Browser-based — opens a URL.", icon: Globe },
-                { id: "TCP",  label: "TCP (PWN)",  desc: "netcat / raw socket — nc host port.", icon: Terminal },
+                { id: "HTTP", label: "HTTP (Web)", desc: "Browser-based — opens a URL.", icon: Globe,    accent: "#60a5ff" },
+                { id: "TCP",  label: "TCP (PWN)",  desc: "netcat / raw socket — nc host port.", icon: Terminal, accent: "#a78bfa" },
+                { id: "SSH",  label: "SSH (Linux)", desc: "SSH shell — credentials shown on start.", icon: Terminal, accent: "#4ade80" },
               ] as const).map(opt => {
                 const Icon = opt.icon;
                 const active = form.connectionType === opt.id;
@@ -1811,15 +1818,15 @@ function DockerTab({
                   <label key={opt.id} style={{
                     display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
                     padding: 14, borderRadius: 6,
-                    border: `1px solid ${active ? "var(--purple, #a78bfa)" : "var(--border)"}`,
-                    background: active ? "rgba(167,139,250,0.06)" : "transparent",
+                    border: `1px solid ${active ? opt.accent : "var(--border)"}`,
+                    background: active ? `${opt.accent}10` : "transparent",
                   }}>
                     <input type="radio" name="connType" value={opt.id} checked={active}
                       onChange={() => setForm({ ...form, connectionType: opt.id })}
-                      style={{ marginTop: 3, accentColor: "var(--purple, #a78bfa)" }} />
+                      style={{ marginTop: 3, accentColor: opt.accent }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                        <Icon size={13} color={active ? "var(--purple, #a78bfa)" : "var(--text-muted)"} />
+                        <Icon size={13} color={active ? opt.accent : "var(--text-muted)"} />
                         <span style={{ fontSize: 13, fontWeight: 600 }}>{opt.label}</span>
                       </div>
                       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{opt.desc}</div>
@@ -1828,6 +1835,21 @@ function DockerTab({
                 );
               })}
             </div>
+
+            {form.connectionType === "SSH" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
+                <Field label="SSH Username" hint="Shown to players when instance starts.">
+                  <input className="input" value={form.sshUsername}
+                    onChange={e => setForm({ ...form, sshUsername: e.target.value })}
+                    placeholder="e.g. guest" />
+                </Field>
+                <Field label="SSH Password" hint="Shown to players when instance starts.">
+                  <input className="input" value={form.sshPassword}
+                    onChange={e => setForm({ ...form, sshPassword: e.target.value })}
+                    placeholder="e.g. guest@222" />
+                </Field>
+              </div>
+            )}
           </Section>
 
           <Section icon={Server} title="Container image" desc="The Docker image to run for each player instance.">

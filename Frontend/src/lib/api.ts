@@ -231,7 +231,7 @@ export interface CTFChallengeDTO {
   requiresInstance: boolean;
   dockerImage: string | null;
   dockerExposedPort: number | null;
-  connectionType: "HTTP" | "TCP" | null;
+  connectionType: "HTTP" | "TCP" | "SSH" | null;
   downloadableFileUrl: string | null;
   downloadableFileName: string | null;
   hints: CTFHintDTO[];
@@ -267,24 +267,28 @@ export interface CTFSubmission {
 
 export interface CTFInstanceResponse {
   instanceId:       string;
-  connectionType:   "HTTP" | "TCP" | null;
+  connectionType:   "HTTP" | "TCP" | "SSH" | null;
   connectionString: string | null;
   accessUrl:        string | null;
   expiresAt:        string;
   status:           string;
   message:          string | null;
   renewalCount:     number;
+  sshUsername?:     string | null;
+  sshPassword?:     string | null;
 }
 
 export interface CTFInstanceWebSocketMessage {
   instanceId:       string;
   status:           "RUNNING" | "FAILED" | "EXPIRED";
-  connectionType?:  "HTTP" | "TCP";
+  connectionType?:  "HTTP" | "TCP" | "SSH";
   connectionString?: string;
   accessUrl?:       string;
   expiresAt?:       string;
   renewalCount?:    number;
   error?:           string;
+  sshUsername?:     string | null;
+  sshPassword?:     string | null;
 }
 
 export interface CTFResourceConfig {
@@ -389,7 +393,7 @@ export interface CTFChallengeCreateRequest {
   dockerExposedPort?: number;
   containerEnvVars?:  string;
   dockerFlagEnv?:     string;
-  connectionType?:    "HTTP" | "TCP";
+  connectionType?:    "HTTP" | "TCP" | "SSH";
   dockerEnvVars?:     Record<string, string>;
   dockerMemoryMb?:    number;
   dockerCpuPercent?:  number;
@@ -416,7 +420,7 @@ export interface CTFChallengeUpdateRequest {
   dockerExposedPort?: number;
   containerEnvVars?:  string;
   dockerFlagEnv?:     string;
-  connectionType?:    "HTTP" | "TCP";
+  connectionType?:    "HTTP" | "TCP" | "SSH";
   dockerEnvVars?:     Record<string, string>;
   dockerMemoryMb?:    number;
   dockerCpuPercent?:  number;
@@ -443,7 +447,7 @@ export interface CTFChallengeResponse {
   dockerExposedPort:   number | null;
   containerEnvVars:    string | null;
   dockerFlagEnv:       string | null;
-  connectionType:      "HTTP" | "TCP" | null;
+  connectionType:      "HTTP" | "TCP" | "SSH" | null;
   dockerEnvVars:       Record<string, string> | null;
   dockerMemoryMb:      number | null;
   dockerCpuPercent:    number | null;
@@ -669,6 +673,8 @@ export interface CTFCompetitionChallengeDTO {
   id:                  string;
   title:               string;
   authorName?:         string | null;
+  sshUsername?:        string | null;
+  sshPassword?:        string | null;
   description:         string;
   category:            string;
   difficulty:          "EASY" | "MEDIUM" | "HARD";
@@ -679,7 +685,7 @@ export interface CTFCompetitionChallengeDTO {
   requiresInstance:    boolean;
   dockerImage?:        string | null;
   dockerExposedPort?:  number | null;
-  connectionType?:     "HTTP" | "TCP" | null;
+  connectionType?:     "HTTP" | "TCP" | "SSH" | null;
   dockerFlagEnv?:      string | null;
   dockerEnvVars?:      Record<string, string> | null;
   dockerMemoryMb?:     number | null;
@@ -941,6 +947,8 @@ export interface TeacherCtfChallengeCreateRequest {
   title:                string;
   description:          string;
   authorName?:          string;
+  sshUsername?:         string;
+  sshPassword?:         string;
   category:             string;
   difficulty:           "EASY" | "MEDIUM" | "HARD";
   basePoints:           number;
@@ -952,7 +960,7 @@ export interface TeacherCtfChallengeCreateRequest {
   dockerExposedPort?:   number;
   containerEnvVars?:    string;
   dockerFlagEnv?:       string;
-  connectionType?:      "HTTP" | "TCP";
+  connectionType?:      "HTTP" | "TCP" | "SSH";
   dockerEnvVars?:       Record<string, string>;
   dockerMemoryMb?:      number;
   dockerCpuPercent?:    number;
@@ -1041,7 +1049,7 @@ export interface CTFLibraryChallengeDTO {
   requiresInstance:    boolean;
   dockerImage?:        string | null;
   dockerExposedPort?:  number | null;
-  connectionType?:     "HTTP" | "TCP" | null;
+  connectionType?:     "HTTP" | "TCP" | "SSH" | null;
   dockerFlagEnv?:      string | null;
   dockerEnvVars?:      Record<string, string> | null;
   dockerMemoryMb?:     number | null;

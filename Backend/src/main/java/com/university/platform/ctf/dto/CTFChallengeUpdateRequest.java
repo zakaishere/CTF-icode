@@ -11,6 +11,8 @@ public class CTFChallengeUpdateRequest {
     private String  title;
     private String  description;
     private String  authorName;
+    private String  sshUsername;
+    private String  sshPassword;
     private String  category;
     private String  difficulty;
     private Integer basePoints;

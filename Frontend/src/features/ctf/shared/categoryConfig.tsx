@@ -19,6 +19,7 @@ export const CAT_CONFIG: Record<string, CategoryDef> = {
   FORENSICS: { label: "Forensics", icon: <Search size={14} />,    accent: "#34d399" },
   OSINT:     { label: "OSINT",     icon: <Eye size={14} />,       accent: "#38bdf8" },
   MISC:      { label: "Misc",      icon: <Puzzle size={14} />,    accent: "#94a3b8" },
+  LINUX:     { label: "Linux",     icon: <Terminal size={14} />,  accent: "#4ade80" },
 };
 
 export const ALL_CAT: CategoryDef = {

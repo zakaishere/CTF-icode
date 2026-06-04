@@ -148,6 +148,12 @@ public class CTFChallenge {
     @Column(name = "author_name", length = 255)
     private String authorName;
 
+    @Column(name = "ssh_username", length = 100)
+    private String sshUsername;
+
+    @Column(name = "ssh_password", length = 100)
+    private String sshPassword;
+
     @Column(name = "competition_id", columnDefinition = "uuid")
     private UUID competitionId;
 
@@ -197,7 +203,7 @@ public class CTFChallenge {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public enum CTFCategory { CRYPTO, FORENSICS, REVERSE, WEB, MISC, OSINT, PWN }
+    public enum CTFCategory { CRYPTO, FORENSICS, REVERSE, WEB, MISC, OSINT, PWN, LINUX }
     public enum CTFDifficulty { EASY, MEDIUM, HARD }
     public enum FlagType { STATIC, DYNAMIC }
 }

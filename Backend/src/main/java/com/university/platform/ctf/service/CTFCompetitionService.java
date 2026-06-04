@@ -867,6 +867,8 @@ public class CTFCompetitionService {
                 .id(c.getId())
                 .title(c.getTitle())
                 .authorName(c.getAuthorName())
+                .sshUsername(c.getSshUsername())
+                .sshPassword(c.getSshPassword())
                 .description(c.getDescription())
                 .category(c.getCategory().name())
                 .difficulty(c.getDifficulty().name())

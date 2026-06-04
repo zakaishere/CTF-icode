@@ -21,6 +21,8 @@ public class CTFChallengeDTO {
     private Integer basePoints;
     private Integer currentPoints;
     private String authorName;
+    private String sshUsername;
+    private String sshPassword;
     private String flagFormat;
     private String flagType;
     private Boolean requiresInstance;

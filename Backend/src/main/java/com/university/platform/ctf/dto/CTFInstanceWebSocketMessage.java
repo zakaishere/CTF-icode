@@ -12,8 +12,10 @@ import java.util.UUID;
 public class CTFInstanceWebSocketMessage {
     private UUID          instanceId;
     private String        status;           // RUNNING | FAILED | EXPIRED
-    private String        connectionType;   // HTTP | TCP
+    private String        connectionType;   // HTTP | TCP | SSH
     private String        connectionString; // URL or host:port
+    private String        sshUsername;
+    private String        sshPassword;
     private String        accessUrl;        // legacy alias
     private LocalDateTime expiresAt;
     private Integer       renewalCount;

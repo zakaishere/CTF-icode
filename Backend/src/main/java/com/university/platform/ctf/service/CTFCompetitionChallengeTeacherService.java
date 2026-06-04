@@ -114,6 +114,8 @@ public class CTFCompetitionChallengeTeacherService {
         c.setHints(buildHints(dto.getHints()));
         c.setAuthorId(userId);
         c.setAuthorName(dto.getAuthorName());
+        c.setSshUsername(dto.getSshUsername());
+        c.setSshPassword(dto.getSshPassword());
         c.setDeleted(false);
         c.setBloodBonusEnabled(Boolean.TRUE.equals(dto.getBloodBonusEnabled()));
         c.setFirstBloodBonus(dto.getFirstBloodBonus()  != null ? dto.getFirstBloodBonus()  : 0);
@@ -182,6 +184,8 @@ public class CTFCompetitionChallengeTeacherService {
         if (dto.getSecondBloodBonus() != null)     c.setSecondBloodBonus(dto.getSecondBloodBonus());
         if (dto.getThirdBloodBonus()  != null)     c.setThirdBloodBonus(dto.getThirdBloodBonus());
         if (dto.getAuthorName()       != null)     c.setAuthorName(dto.getAuthorName());
+        if (dto.getSshUsername()      != null)     c.setSshUsername(dto.getSshUsername());
+        if (dto.getSshPassword()      != null)     c.setSshPassword(dto.getSshPassword());
 
         challengeRepo.save(c);
 
@@ -441,6 +445,8 @@ public class CTFCompetitionChallengeTeacherService {
                 .id(c.getId())
                 .title(c.getTitle())
                 .authorName(c.getAuthorName())
+                .sshUsername(c.getSshUsername())
+                .sshPassword(c.getSshPassword())
                 .description(c.getDescription())
                 .category(c.getCategory() != null ? c.getCategory().name() : null)
                 .difficulty(c.getDifficulty() != null ? c.getDifficulty().name() : null)

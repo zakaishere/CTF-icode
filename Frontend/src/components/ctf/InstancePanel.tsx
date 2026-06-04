@@ -44,8 +44,8 @@ export interface InstancePanelProps {
   challengeId:    string;
   challengeTitle: string;
   requiresInstance: boolean;
-  /** "HTTP" (default) or "TCP" */
-  connectionType?: "HTTP" | "TCP";
+  /** "HTTP" (default), "TCP", or "SSH" */
+  connectionType?: "HTTP" | "TCP" | "SSH";
   /** Pass to scope the instance to a competition team */
   competitionId?: string;
   teamId?: string;
@@ -176,7 +176,7 @@ function IndeterminateBar({ c }: { c: typeof DARK }) {
 
 export default function InstancePanel({
   challengeId, challengeTitle, requiresInstance,
-  connectionType: configConnType = "HTTP",
+  connectionType: configConnType = "HTTP" as "HTTP" | "TCP" | "SSH",
   competitionId, teamId,
   dark = false,
   compactIdle = false,
@@ -197,9 +197,11 @@ export default function InstancePanel({
   const instanceId = useRef<string | null>(null);
 
   // Derive connection type: prefer what the instance reports, fall back to prop
-  const connType: "HTTP" | "TCP" =
-    (instance?.connectionType as "HTTP" | "TCP" | null) ?? configConnType;
+  const connType: "HTTP" | "TCP" | "SSH" =
+    (instance?.connectionType as "HTTP" | "TCP" | "SSH" | null) ?? configConnType;
   const connString = instance?.connectionString ?? instance?.accessUrl ?? null;
+  const sshUser = instance?.sshUsername ?? null;
+  const sshPass = instance?.sshPassword ?? null;
 
   const sessionKey = `ctf-instance-${challengeId}${teamId ? `-${teamId}` : ""}`;
 
@@ -296,6 +298,8 @@ export default function InstancePanel({
               status:           "RUNNING",
               message:          null,
               renewalCount:     msg.renewalCount ?? 0,
+              sshUsername:      msg.sshUsername ?? null,
+              sshPassword:      msg.sshPassword ?? null,
             };
             setInstance(updated);
             setState("RUNNING");
@@ -400,15 +404,18 @@ export default function InstancePanel({
     setBusy(false);
   };
 
-  // connString for TCP is stored as "host:port" — split so nc gets separate args.
-  const [tcpHost, tcpPort] = (connType === "TCP" && connString?.includes(":"))
+  // connString for TCP/SSH is "host:port" — split so nc/ssh gets separate args.
+  const [connHost, connPort] = ((connType === "TCP" || connType === "SSH") && connString?.includes(":"))
     ? connString.split(":")
     : [connString ?? "", ""];
-  const ncCommand = connType === "TCP" ? `nc ${tcpHost} ${tcpPort}` : connString ?? "";
+  const ncCommand  = connType === "TCP"  ? `nc ${connHost} ${connPort}` : connString ?? "";
+  const sshCommand = connType === "SSH"  ? `ssh ${sshUser ?? "guest"}@${connHost} -p ${connPort}` : "";
 
   const copyConn = () => {
     if (!connString) return;
-    const toCopy = connType === "TCP" ? ncCommand : connString;
+    const toCopy = connType === "TCP" ? ncCommand
+                 : connType === "SSH" ? sshCommand
+                 : connString;
     navigator.clipboard.writeText(toCopy);
     setCopied(true);
     toast.success("Copied", toCopy);
@@ -468,7 +475,11 @@ export default function InstancePanel({
         </span>
         <span className="lbl">
           <span className="title">Start Instance</span>
-          <span className="sub">{connType} environment</span>
+          <span className="sub">
+            {connType === "SSH"
+              ? "Connect via SSH — credentials provided on start"
+              : `${connType} environment`}
+          </span>
         </span>
       </button>
     );
@@ -490,8 +501,12 @@ export default function InstancePanel({
         </div>
         <span style={{
           fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3,
-          background: connType === "TCP" ? "rgba(167,139,250,0.12)" : "rgba(96,165,250,0.1)",
-          color: connType === "TCP" ? c.purple : c.blue,
+          background: connType === "TCP" ? "rgba(167,139,250,0.12)"
+                    : connType === "SSH" ? "rgba(74,222,128,0.12)"
+                    : "rgba(96,165,250,0.1)",
+          color: connType === "TCP" ? c.purple
+               : connType === "SSH" ? c.green
+               : c.blue,
           letterSpacing: "0.06em",
         }}>{connType}</span>
       </div>
@@ -573,13 +588,66 @@ export default function InstancePanel({
           </span>
           <span style={{
             fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
-            background: connType === "TCP" ? "rgba(167,139,250,0.15)" : "rgba(96,165,250,0.12)",
-            color: connType === "TCP" ? c.purple : c.blue,
+            background: connType === "TCP" ? "rgba(167,139,250,0.15)"
+                      : connType === "SSH" ? "rgba(74,222,128,0.15)"
+                      : "rgba(96,165,250,0.12)",
+            color: connType === "TCP" ? c.purple
+                 : connType === "SSH" ? c.green
+                 : c.blue,
           }}>{connType}</span>
         </div>
 
         {/* Connection row */}
-        {connType === "TCP" ? (
+        {connType === "SSH" ? (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: c.muted, marginBottom: 5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              SSH Connection
+            </div>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: c.bg, border: `1px solid ${c.cardBorder}`,
+              borderRadius: 5, padding: "6px 10px", marginBottom: 8,
+            }}>
+              <Terminal size={12} color={c.green} style={{ flexShrink: 0 }} />
+              <code style={{ flex: 1, fontSize: 12, color: c.green, fontFamily: "monospace", wordBreak: "break-all" }}>
+                {sshCommand}
+              </code>
+              <button
+                onClick={copyConn}
+                title="Copy SSH command"
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  color: copied ? c.green : c.muted, flexShrink: 0,
+                  display: "flex", alignItems: "center", gap: 4,
+                  fontSize: 11, fontWeight: copied ? 700 : 400,
+                  transition: "color 150ms",
+                }}
+              >
+                {copied ? "Copied!" : <Copy size={13} />}
+              </button>
+            </div>
+            {(sshUser || sshPass) && (
+              <div style={{
+                background: c.bg, border: `1px solid ${c.cardBorder}`,
+                borderRadius: 5, padding: "8px 10px",
+                display: "flex", flexDirection: "column", gap: 4,
+              }}>
+                {sshUser && (
+                  <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
+                    <span style={{ color: c.muted, minWidth: 72 }}>Username:</span>
+                    <code style={{ color: c.green, fontFamily: "monospace" }}>{sshUser}</code>
+                  </div>
+                )}
+                {sshPass && (
+                  <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
+                    <span style={{ color: c.muted, minWidth: 72 }}>Password:</span>
+                    <code style={{ color: c.green, fontFamily: "monospace" }}>{sshPass}</code>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : connType === "TCP" ? (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: c.muted, marginBottom: 5 }}>Connect with:</div>
             <div style={{

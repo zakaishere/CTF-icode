@@ -44,6 +44,7 @@ public class CTFInstanceService {
     private static final int    MAX_RENEWALS = 3;
     private static final String HTTP         = "HTTP";
     private static final String TCP          = "TCP";
+    private static final String SSH          = "SSH";
 
     // TODO (PHASE 6 — deferred): Replace with a Redis SET for multi-node safety.
     // On a single server this ConcurrentHashMap is correct. With two backend nodes,
@@ -491,9 +492,9 @@ public class CTFInstanceService {
                         durationMinutes, protocol, envMap);
                 var ready = workerAgentClient.waitForReady(started.instanceId());
 
-                String connStr = TCP.equals(protocol)
-                        ? ready.host() + ":" + ready.port()
-                        : "http://" + ready.host() + ":" + ready.port();
+                String connStr = HTTP.equals(protocol)
+                        ? "http://" + ready.host() + ":" + ready.port()
+                        : ready.host() + ":" + ready.port(); // TCP and SSH: host:port
                 LocalDateTime expiresAt = parseDateTime(ready.expiresAt());
                 final String finalConnStr = connStr;
                 final LocalDateTime finalExpiresAt = expiresAt;
@@ -521,6 +522,8 @@ public class CTFInstanceService {
                                 .accessUrl(HTTP.equals(protocol) ? connStr : null)
                                 .expiresAt(expiresAt)
                                 .renewalCount(0)
+                                .sshUsername(SSH.equals(protocol) ? challenge.getSshUsername() : null)
+                                .sshPassword(SSH.equals(protocol) ? challenge.getSshPassword() : null)
                                 .build());
 
                 log.info("CTF instance {} RUNNING via agent: host={} port={}",
@@ -658,7 +661,7 @@ public class CTFInstanceService {
                 // the port is STILL reachable. A second successful connection proves the
                 // wrapper is in multi-connection mode; failure means the instance would be
                 // dead on arrival for every student that follows.
-                if (TCP.equals(connectionType(challenge))) {
+                if (TCP.equals(connectionType(challenge)) || SSH.equals(connectionType(challenge))) {
                     try { Thread.sleep(1500); } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                     }
@@ -741,6 +744,8 @@ public class CTFInstanceService {
                                 .accessUrl(HTTP.equals(connType) ? connStr : null)
                                 .expiresAt(updated != null ? updated.getExpiresAt() : null)
                                 .renewalCount(0)
+                                .sshUsername(SSH.equals(connType) ? challenge.getSshUsername() : null)
+                                .sshPassword(SSH.equals(connType) ? challenge.getSshPassword() : null)
                                 .build());
 
                 log.info("CTF instance {} RUNNING port={} network={} expires={}",
@@ -771,6 +776,8 @@ public class CTFInstanceService {
                                 .expiresAt(instanceRepo.findById(instanceId)
                                         .map(CTFInstance::getExpiresAt).orElse(null))
                                 .renewalCount(0)
+                                .sshUsername(SSH.equals(connType) ? challenge.getSshUsername() : null)
+                                .sshPassword(SSH.equals(connType) ? challenge.getSshPassword() : null)
                                 .build());
             }
 
@@ -1143,14 +1150,18 @@ public class CTFInstanceService {
     }
 
     private String connectionType(CTFChallenge challenge) {
-        return TCP.equals(challenge.getConnectionType()) ? TCP : HTTP;
+        String ct = challenge.getConnectionType();
+        if (SSH.equals(ct)) return SSH;
+        if (TCP.equals(ct)) return TCP;
+        return HTTP;
     }
 
     private String buildConnectionString(CTFChallenge challenge, int port) {
-        if (TCP.equals(challenge.getConnectionType())) {
-            return instanceHost + ":" + port;
+        if (HTTP.equals(challenge.getConnectionType())) {
+            return "http://" + instanceHost + ":" + port;
         }
-        return "http://" + instanceHost + ":" + port;
+        // TCP and SSH both surface as host:port; SSH client adds user@ on the frontend
+        return instanceHost + ":" + port;
     }
 
     private int effectiveMemMb(CTFChallenge challenge, com.university.platform.ctf.entity.CTFResourceConfig config) {
@@ -1182,17 +1193,20 @@ public class CTFInstanceService {
     }
 
     private CTFInstanceResponse toResponse(CTFInstance inst, CTFChallenge challenge, String message) {
-        String connType = (challenge != null && TCP.equals(challenge.getConnectionType())) ? TCP : HTTP;
+        String connType = challenge != null ? connectionType(challenge) : HTTP;
         String connStr  = inst.getConnectionString();
+        boolean running = "RUNNING".equals(inst.getStatus());
         return CTFInstanceResponse.builder()
                 .instanceId(inst.getId())
                 .connectionType(connType)
-                .connectionString("RUNNING".equals(inst.getStatus()) ? connStr : null)
-                .accessUrl("RUNNING".equals(inst.getStatus()) && HTTP.equals(connType) ? connStr : null)
+                .connectionString(running ? connStr : null)
+                .accessUrl(running && HTTP.equals(connType) ? connStr : null)
                 .expiresAt(inst.getExpiresAt())
                 .status(inst.getStatus())
                 .message(message)
                 .renewalCount(inst.getRenewalCount() != null ? inst.getRenewalCount() : 0)
+                .sshUsername(SSH.equals(connType) && challenge != null ? challenge.getSshUsername() : null)
+                .sshPassword(SSH.equals(connType) && challenge != null ? challenge.getSshPassword() : null)
                 .build();
     }
 }

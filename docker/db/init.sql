@@ -118,8 +118,10 @@ CREATE TABLE IF NOT EXISTS ctf_challenges (
     second_blood_bonus    integer DEFAULT 0 NOT NULL,
     third_blood_bonus     integer DEFAULT 0 NOT NULL,
     author_name           character varying(255),
+    ssh_username          character varying(100),
+    ssh_password          character varying(100),
     CONSTRAINT ctf_challenges_category_check
-        CHECK (category = ANY (ARRAY['CRYPTO','FORENSICS','REVERSE','WEB','MISC','OSINT','PWN'])),
+        CHECK (category = ANY (ARRAY['CRYPTO','FORENSICS','REVERSE','WEB','MISC','OSINT','PWN','LINUX'])),
     CONSTRAINT ctf_challenges_difficulty_check
         CHECK (difficulty = ANY (ARRAY['EASY','MEDIUM','HARD']))
 );
@@ -340,6 +342,13 @@ ALTER TABLE ctf_teams               ADD CONSTRAINT ctf_teams_pkey               
 
 -- Add author_name to challenges (safe for existing databases)
 ALTER TABLE ctf_challenges ADD COLUMN IF NOT EXISTS author_name character varying(255);
+-- SSH credential fields
+ALTER TABLE ctf_challenges ADD COLUMN IF NOT EXISTS ssh_username character varying(100);
+ALTER TABLE ctf_challenges ADD COLUMN IF NOT EXISTS ssh_password character varying(100);
+-- Widen category constraint to include LINUX
+ALTER TABLE ctf_challenges DROP CONSTRAINT IF EXISTS ctf_challenges_category_check;
+ALTER TABLE ctf_challenges ADD CONSTRAINT ctf_challenges_category_check
+    CHECK (category = ANY (ARRAY['CRYPTO','FORENSICS','REVERSE','WEB','MISC','OSINT','PWN','LINUX']));
 
 -- Double-solve race condition prevention
 ALTER TABLE ctf_competition_solves DROP CONSTRAINT IF EXISTS uq_comp_solve;
