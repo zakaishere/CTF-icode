@@ -20,6 +20,7 @@ public class CTFChallengeDTO {
     private String difficulty;
     private Integer basePoints;
     private Integer currentPoints;
+    private String authorName;
     private String flagFormat;
     private String flagType;
     private Boolean requiresInstance;

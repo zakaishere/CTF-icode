@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS ctf_challenges (
     first_blood_bonus     integer DEFAULT 0 NOT NULL,
     second_blood_bonus    integer DEFAULT 0 NOT NULL,
     third_blood_bonus     integer DEFAULT 0 NOT NULL,
+    author_name           character varying(255),
     CONSTRAINT ctf_challenges_category_check
         CHECK (category = ANY (ARRAY['CRYPTO','FORENSICS','REVERSE','WEB','MISC','OSINT','PWN'])),
     CONSTRAINT ctf_challenges_difficulty_check
@@ -336,6 +337,9 @@ ALTER TABLE ctf_team_members        ADD CONSTRAINT ctf_team_members_pkey        
 ALTER TABLE ctf_teams               ADD CONSTRAINT ctf_teams_pkey               PRIMARY KEY (id);
 
 -- ── Constraints and indexes ───────────────────────────────────────────────────
+
+-- Add author_name to challenges (safe for existing databases)
+ALTER TABLE ctf_challenges ADD COLUMN IF NOT EXISTS author_name character varying(255);
 
 -- Double-solve race condition prevention
 ALTER TABLE ctf_competition_solves DROP CONSTRAINT IF EXISTS uq_comp_solve;

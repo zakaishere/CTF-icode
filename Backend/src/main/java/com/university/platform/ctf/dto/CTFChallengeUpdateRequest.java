@@ -10,6 +10,7 @@ public class CTFChallengeUpdateRequest {
 
     private String  title;
     private String  description;
+    private String  authorName;
     private String  category;
     private String  difficulty;
     private Integer basePoints;

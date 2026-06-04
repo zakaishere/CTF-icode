@@ -668,6 +668,7 @@ export interface CTFFeedEventDTO {
 export interface CTFCompetitionChallengeDTO {
   id:                  string;
   title:               string;
+  authorName?:         string | null;
   description:         string;
   category:            string;
   difficulty:          "EASY" | "MEDIUM" | "HARD";
@@ -939,6 +940,7 @@ export const endTeacherCtfCompetition     = endAdminCtfCompetition;
 export interface TeacherCtfChallengeCreateRequest {
   title:                string;
   description:          string;
+  authorName?:          string;
   category:             string;
   difficulty:           "EASY" | "MEDIUM" | "HARD";
   basePoints:           number;

@@ -226,6 +226,9 @@ export default function ChallengeModal({
               )}
             </div>
             <h2>{c.title}</h2>
+            {c.authorName && (
+              <div className="author">by {c.authorName}</div>
+            )}
           </div>
           <div className="modal-head-right">
             <div className="pts-big">

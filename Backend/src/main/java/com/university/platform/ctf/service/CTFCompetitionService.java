@@ -866,6 +866,7 @@ public class CTFCompetitionService {
         return CTFChallengeDTO.builder()
                 .id(c.getId())
                 .title(c.getTitle())
+                .authorName(c.getAuthorName())
                 .description(c.getDescription())
                 .category(c.getCategory().name())
                 .difficulty(c.getDifficulty().name())

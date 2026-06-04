@@ -145,6 +145,9 @@ public class CTFChallenge {
     @Column(name = "author_id")
     private UUID authorId;
 
+    @Column(name = "author_name", length = 255)
+    private String authorName;
+
     @Column(name = "competition_id", columnDefinition = "uuid")
     private UUID competitionId;
 

@@ -1049,6 +1049,7 @@ function ChallengePanel({
   // ── State ─────────────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     title: existing?.title ?? "",
+    authorName: existing?.authorName ?? "",
     description: existing?.description ?? "",
     category: existing?.category ?? "WEB",
     difficulty: (existing?.difficulty ?? "EASY") as "EASY" | "MEDIUM" | "HARD",
@@ -1178,6 +1179,7 @@ function ChallengePanel({
       if (mode === "create") {
         const payload: TeacherCtfChallengeCreateRequest = {
           title: form.title.trim(),
+          authorName: form.authorName.trim() || undefined,
           description: form.description,
           category: form.category,
           difficulty: form.difficulty,
@@ -1220,6 +1222,7 @@ function ChallengePanel({
       } else if (existing) {
         const payload: TeacherCtfChallengeUpdateRequest = {
           title: form.title,
+          authorName: form.authorName.trim() || undefined,
           description: form.description,
           category: form.category,
           difficulty: form.difficulty,
@@ -1512,6 +1515,12 @@ function BasicsTab({
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             onBlur={() => markTouched("title")}
             placeholder="e.g. SQLi 101"
+          />
+        </Field>
+        <Field label="Author" hint="Displayed in the challenge modal (optional).">
+          <input className="input" value={form.authorName}
+            onChange={(e) => setForm({ ...form, authorName: e.target.value })}
+            placeholder="e.g. John Doe"
           />
         </Field>
         <Field label="Description" hint="Markdown / pre-formatted text is preserved.">
