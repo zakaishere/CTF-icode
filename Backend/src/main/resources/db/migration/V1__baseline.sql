@@ -1,0 +1,3 @@
+-- Baseline: existing schema created by docker/db/init.sql.
+-- Flyway marks this version as applied on first run against an existing database
+-- (baseline-on-migrate = true). No SQL needed here.
