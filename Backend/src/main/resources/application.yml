@@ -28,6 +28,12 @@ spring:
     baseline-on-migrate: true
     baseline-version: 1
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 150MB
+      max-request-size: 150MB
+
   jpa:
     hibernate:
       ddl-auto: validate
