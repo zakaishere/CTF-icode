@@ -3,16 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Trophy, Snowflake, Loader2, ChevronDown } from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ReferenceLine, ResponsiveContainer,
-} from "recharts";
+import { Trophy, Snowflake } from "lucide-react";
 import {
   getCtfScoreboard,
-  getCtfScoreboardGraph,
   type CTFScoreboardEntryDTO,
-  type CTFScoreTimelineDTO,
 } from "@/lib/api";
 import { useCTFCompetition } from "@/features/ctf/context/CTFCompetitionContext";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -67,33 +61,17 @@ export default function ScoreboardPage() {
 
   const visible = board.filter(e => e.totalPoints > 0 || e.solveCount > 0);
 
-  const shared = (
-    <ScoreTimeline
-      competitionId={id}
-      status={status}
-      frozenAt={ctx.competition.frozenAt ?? null}
-    />
-  );
-
   if (status === "ENDED" && visible.length > 0) {
-    return (
-      <>
-        <FinalResults visible={visible} myTeamId={ctx.myTeam?.id ?? null} />
-        {shared}
-      </>
-    );
+    return <FinalResults visible={visible} myTeamId={ctx.myTeam?.id ?? null} />;
   }
 
   return (
-    <>
-      <LiveScoreboard
-        visible={visible}
-        myTeamId={ctx.myTeam?.id ?? null}
-        isFrozen={status === "FROZEN"}
-        frozenAt={ctx.competition.frozenAt ?? null}
-      />
-      {shared}
-    </>
+    <LiveScoreboard
+      visible={visible}
+      myTeamId={ctx.myTeam?.id ?? null}
+      isFrozen={status === "FROZEN"}
+      frozenAt={ctx.competition.frozenAt ?? null}
+    />
   );
 }
 
@@ -538,245 +516,3 @@ function ScoreboardTable({ rows, myTeamId, competitionId }: {
   );
 }
 
-// ── Score Timeline chart ──────────────────────────────────────────────────────
-
-function ScoreTimeline({ competitionId, status, frozenAt }: {
-  competitionId: string;
-  status: string;
-  frozenAt: string | null;
-}) {
-  const [graphData, setGraphData] = useState<CTFScoreTimelineDTO | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(status !== "ENDED");
-
-  useEffect(() => {
-    if (status !== "ACTIVE" && status !== "ENDED" && status !== "FROZEN") {
-      setLoading(false);
-      return;
-    }
-    getCtfScoreboardGraph(competitionId)
-      .then(setGraphData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitionId, status]);
-
-  // All hooks must come before any conditional return (Rules of Hooks).
-  // Merge all team events into a flat timeline sorted by time.
-  const { chartData, startMs } = useMemo(() => {
-    if (!graphData?.teams.length) return { chartData: [], startMs: 0 };
-
-    const s = graphData.competitionStart
-      ? new Date(graphData.competitionStart).getTime()
-      : Math.min(...graphData.teams.flatMap(t =>
-          t.points.map(p => new Date(p.time).getTime())
-        ));
-
-    const allEvents = graphData.teams
-      .flatMap(t => t.points.map(p => ({
-        ms: new Date(p.time).getTime(),
-        teamId: t.teamId,
-        score: p.score,
-      })))
-      .sort((a, b) => a.ms - b.ms);
-
-    const currentScores: Record<string, number> = {};
-    graphData.teams.forEach(t => { currentScores[t.teamId] = 0; });
-
-    const rows: Array<Record<string, number>> = [];
-    for (const evt of allEvents) {
-      currentScores[evt.teamId] = evt.score;
-      const minutes = Math.round((evt.ms - s) / 6000) / 10;
-      const row: Record<string, number> = { minutes };
-      graphData.teams.forEach(t => { row[t.teamId] = currentScores[t.teamId]; });
-      rows.push({ ...row });
-    }
-
-    return { chartData: rows, startMs: s };
-  }, [graphData]);
-
-  const maxScore = useMemo(() => {
-    if (!chartData.length || !graphData) return 100;
-    let m = 0;
-    chartData.forEach(row => {
-      graphData.teams.forEach(t => {
-        const v = row[t.teamId] as number ?? 0;
-        if (v > m) m = v;
-      });
-    });
-    return Math.ceil(m * 1.1) || 100;
-  }, [chartData, graphData]);
-
-  // Safe to return early now that all hooks have been called.
-  const qualifyingTeams = graphData?.teams.filter(t => t.points.length > 0) ?? [];
-  if (!loading && qualifyingTeams.length < 2) return null;
-
-  const freezeMinutes = frozenAt && startMs > 0
-    ? (new Date(frozenAt).getTime() - startMs) / 60000
-    : null;
-
-  const fmtMinutes = (m: number) => {
-    const h = Math.floor(m / 60);
-    const min = Math.floor(m % 60);
-    return h > 0 ? `${h}h${min.toString().padStart(2, "0")}m` : `${min}m`;
-  };
-
-  return (
-    <div style={{ marginTop: 20, border: "1px solid rgba(130,165,255,0.12)", borderRadius: 10, overflow: "hidden" }}>
-      <button
-        type="button"
-        onClick={() => setExpanded(e => !e)}
-        style={{
-          width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "12px 16px",
-          background: "rgba(10,17,36,0.9)",
-          border: "none", cursor: "pointer",
-          color: "#eaf0ff",
-        }}
-      >
-        <span style={{
-          display: "flex", alignItems: "center", gap: 8,
-          fontFamily: "'Chakra Petch', system-ui, sans-serif",
-          fontWeight: 700, fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase",
-        }}>
-          📈 Score Timeline — Top {graphData?.teams.length ?? 10} Teams
-        </span>
-        <ChevronDown size={16} style={{
-          color: "#4a5874",
-          transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-          transition: "transform 150ms",
-        }} />
-      </button>
-
-      {expanded && (
-        <div style={{ padding: "16px 4px 12px", background: "rgba(5,11,29,0.95)" }}>
-          {loading ? (
-            <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Loader2 size={24} style={{ animation: "spin 1s linear infinite", color: "#60a5ff" }} />
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid stroke="rgba(130,165,255,0.07)" strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="minutes"
-                  type="number"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={fmtMinutes}
-                  tick={{ fill: "#4a5874", fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }}
-                  axisLine={{ stroke: "rgba(130,165,255,0.1)" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, maxScore]}
-                  tick={{ fill: "#4a5874", fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={44}
-                />
-                <Tooltip
-                  content={
-                    <ChartTooltip
-                      teams={graphData?.teams ?? []}
-                      fmtMinutes={fmtMinutes}
-                    />
-                  }
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 10, paddingTop: 8, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}
-                  formatter={(value) => {
-                    const team = graphData?.teams.find(t => t.teamId === value);
-                    return <span style={{ color: "#6b7ea3", letterSpacing: "0.04em" }}>{team?.teamName ?? value}</span>;
-                  }}
-                />
-                {freezeMinutes !== null && (
-                  <ReferenceLine
-                    x={freezeMinutes}
-                    stroke="#22d3ee"
-                    strokeDasharray="4 4"
-                    label={{ value: "Scoreboard frozen", fill: "#22d3ee", fontSize: 9, position: "insideTopRight" }}
-                  />
-                )}
-                {(graphData?.teams ?? []).map(team => (
-                  <Line
-                    key={team.teamId}
-                    dataKey={team.teamId}
-                    name={team.teamName}
-                    stroke={team.accentColor}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                    type="stepAfter"
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-type TooltipPayloadEntry = {
-  dataKey: string;
-  value: number;
-  stroke: string;
-  name: string;
-};
-
-function ChartTooltip({ active, payload, label, teams, fmtMinutes }: {
-  active?: boolean;
-  payload?: TooltipPayloadEntry[];
-  label?: number;
-  teams: CTFScoreTimelineDTO["teams"];
-  fmtMinutes: (m: number) => string;
-}) {
-  if (!active || !payload?.length) return null;
-
-  const sorted = [...payload]
-    .filter(p => p.value > 0)
-    .sort((a, b) => b.value - a.value);
-
-  return (
-    <div style={{
-      background: "rgba(8,15,36,0.96)", border: "1px solid rgba(130,165,255,0.15)", borderRadius: 8,
-      padding: "8px 12px", fontSize: 12, maxWidth: 210,
-      backdropFilter: "blur(12px)",
-      boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-    }}>
-      <div style={{
-        fontFamily: "'Chakra Petch', system-ui, sans-serif",
-        color: "#4a5874", marginBottom: 6, fontSize: 9,
-        letterSpacing: "0.1em", textTransform: "uppercase",
-      }}>
-        T+{fmtMinutes(label ?? 0)}
-      </div>
-      {sorted.map(e => {
-        const team = teams.find(t => t.teamId === e.dataKey);
-        return (
-          <div key={e.dataKey} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-            <span style={{
-              width: 7, height: 7, borderRadius: "50%",
-              background: e.stroke ?? team?.accentColor ?? "#60a5ff",
-              flexShrink: 0,
-              boxShadow: `0 0 5px ${e.stroke ?? team?.accentColor ?? "#60a5ff"}`,
-            }} />
-            <span style={{
-              fontFamily: "Inter, system-ui", color: "#a9b8d8", flex: 1, fontSize: 11,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>
-              {team?.teamName ?? e.dataKey}
-            </span>
-            <span style={{
-              fontFamily: "'JetBrains Mono', monospace", color: "#eaf0ff", fontWeight: 700, fontSize: 11,
-            }}>
-              {e.value}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
